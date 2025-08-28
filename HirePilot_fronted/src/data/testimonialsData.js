@@ -1,0 +1,81 @@
+// Datos de ejemplo para los testimonios
+export const testimonialsData = [
+  {
+    id: 1,
+    name: "María Rodríguez",
+    position: "Marketing Manager",
+    company: "TechCorp",
+    content:
+      "Después de usar CVPro, conseguí 5 entrevistas en 2 semanas. El CV personalizado realmente marca la diferencia. La atención al detalle y la optimización ATS fueron clave para mi éxito.",
+    rating: 4,
+    avatar: false,
+    verified: true,
+    date: "Hace 2 semanas",
+    category: "Marketing",
+  },
+  {
+    id: 2,
+    name: "Carlos López",
+    position: "Senior Developer",
+    company: "StartupXYZ",
+    content:
+      "Increíble servicio. Mi CV ahora pasa todos los filtros automáticos y llega a recursos humanos. La personalización para cada oferta es exactamente lo que necesitaba.",
+    rating: 5,
+    avatar: false,
+    verified: true,
+    date: "Hace 1 mes",
+    category: "Tecnología",
+  },
+  {
+    id: 3,
+    name: "Ana García",
+    position: "Project Manager",
+    company: "Consulting Plus",
+    content:
+      "Conseguí el trabajo de mis sueños gracias a CVPro. La personalización es clave en el mercado actual. El equipo entiende perfectamente las necesidades de cada industria.",
+    rating: 3,
+    avatar: false,
+    verified: true,
+    date: "Hace 3 semanas",
+    category: "Gestión",
+  },
+  {
+    id: 4,
+    name: "David Martín",
+    position: "UX Designer",
+    company: "Design Studio",
+    content:
+      "La diferencia es notable. Antes enviaba el mismo CV a todas las ofertas, ahora cada uno está perfectamente adaptado. Mi tasa de respuesta aumentó un 300%.",
+    rating: 5,
+    avatar: false,
+    verified: true,
+    date: "Hace 1 semana",
+    category: "Diseño",
+  },
+  {
+    id: 5,
+    name: "Laura Fernández",
+    position: "Sales Director",
+    company: "Global Sales Inc",
+    content:
+      "Profesional, rápido y efectivo. El servicio superó mis expectativas. Ahora tengo un CV que realmente destaca mis fortalezas para cada posición específica.",
+    rating: 5,
+    avatar:false,
+    verified: true,
+    date: "Hace 2 días",
+    category: "Ventas",
+  },
+  {
+    id: 6,
+    name: "Roberto Silva",
+    position: "Financial Analyst",
+    company: "Finance Corp",
+    content:
+      "La optimización ATS es impresionante. Finalmente mis CVs llegan a las personas correctas. La inversión se pagó sola con la primera entrevista que conseguí.",
+    rating: 4,
+    avatar: false,
+    verified: true,
+    date: "Hace 5 días",
+    category: "Finanzas",
+  },
+]
