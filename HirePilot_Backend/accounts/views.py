@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import User
+from django.contrib.auth import authenticate
 from .models import Profile
 
 @api_view(['POST'])
@@ -45,8 +46,6 @@ def register(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    print("Usuario registrado:", username)
-
     # Crear el usuario
     user = User.objects.create_user(
         username=username,
@@ -84,11 +83,41 @@ def register(request):
 @api_view(['POST'])
 def login(request):
     """
-    Handle user login.
+    Handle user login and return JWT tokens.
     """
-    # Here you would typically handle the login logic,
-    # such as validating the credentials and returning a token.
-    return Response({"message": "User logged in successfully."})
+    email = request.data.get("email")
+    password = request.data.get("password")
+
+    if not email or not password:
+        return Response(
+            {"error": "Debe enviar email y contraseña."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Intentar autenticar usuario
+    user = authenticate(username=email, password=password)
+    if user is None:
+        return Response(
+            {"error": "Credenciales inválidas."},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+
+    # Generar tokens JWT
+    refresh = RefreshToken.for_user(user)
+    access_token = str(refresh.access_token)
+
+    # Devolver tokens y datos opcionales
+    return Response(
+        {
+            "access_token": access_token,
+            "refresh_token": str(refresh),
+            "user_id": user.id,
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name
+        },
+        status=status.HTTP_200_OK
+    )
 
 @api_view(['GET'])
 def profile(request):

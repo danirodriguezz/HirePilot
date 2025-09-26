@@ -2,8 +2,11 @@
 
 import { useState } from "react"
 import { Link } from "react-router-dom"
+import api from "../../api/axiosInstance"
+import { useNavigate } from "react-router-dom"
 
 const LoginPage = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -45,27 +48,34 @@ const LoginPage = () => {
   }
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!validateForm()) return
+  e.preventDefault();
+  if (!validateForm()) return;
 
-    setIsLoading(true)
-    try {
-      // Simular llamada a API
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-      console.log("Login exitoso:", formData)
-      alert("¡Login exitoso! Redirigiendo al dashboard...")
-      // Aquí redirigirías al dashboard
-    } catch (error) {
-      setErrors({ general: "Error al iniciar sesión. Inténtalo de nuevo." })
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  setIsLoading(true);
+  try {
+    // Petición real al backend
+    const response = await api.post("/login", {
+      email: formData.email,      // ajusta los campos según tu backend
+      password: formData.password // asegúrate de que los nombres coinciden
+    });
 
-  const handleSocialLogin = (provider) => {
-    console.log(`Login con ${provider}`)
-    alert(`Iniciando sesión con ${provider}...`)
+    // Guardar tokens en localStorage
+    localStorage.setItem("access_token", response.data.access_token);
+    localStorage.setItem("refresh_token", response.data.refresh_token);
+
+    // (Opcional) Guardar info del usuario
+    localStorage.setItem("user_id", response.data.user_id);
+
+    // Redirigir al dashboard
+    navigate("/dashboard");
+  } catch (error) {
+    setErrors({
+      general: error.response.data.error || "Error al iniciar sesión. Inténtalo de nuevo."
+    });
+  } finally {
+    setIsLoading(false);
   }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50 flex items-center justify-center px-4 py-12">

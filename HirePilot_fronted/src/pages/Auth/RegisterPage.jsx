@@ -1,5 +1,5 @@
 "use client"
-import axios from "axios"
+import api from "../../api/axiosInstance"
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { routes } from "../../routes/routes"
@@ -30,7 +30,7 @@ const RegisterPage = () => {
 
   // Cargar opciones de industria al montar el componente
   useEffect(() => {
-    axios.get("http://127.0.0.1:8000/api/industry_choices")
+    api.get("http://127.0.0.1:8000/api/industry_choices")
       .then((response) => {
         setIndustryChoices(response.data.industry_choices)
       })
@@ -101,11 +101,11 @@ const RegisterPage = () => {
   const handleSubmit = async (e) => {
   e.preventDefault();
   if (!validateStep(3)) return;
-
   setIsLoading(true);
+
   try {
-    const response = await axios.post(
-      "http://127.0.0.1:8000/api/register",
+    const response = await api.post(
+      "/register",
       formData,
       {
         headers: {
@@ -113,14 +113,10 @@ const RegisterPage = () => {
         },
       }
     );
-
-    // Guardar token en localStorage
     localStorage.setItem("access_token", response.data.access_token);
     localStorage.setItem("refresh_token", response.data.refresh_token);
-
-    // (Opcional) Guardar datos del usuario
     localStorage.setItem("user_id", response.data.user_id);
-
+    window.location.href = "/dashboard";
   } catch (error) {
     if (error.response) {
       // Errores desde el backend
