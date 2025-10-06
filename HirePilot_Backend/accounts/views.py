@@ -1,7 +1,10 @@
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
+from rest_framework.views import APIView
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from .models import Profile
@@ -119,13 +122,23 @@ def login(request):
         status=status.HTTP_200_OK
     )
 
+
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])  # Permitir acceso solo a usuarios autenticados
 def profile(request):
-    """
-    Retrieve user profile information.
-    """
-    # Here you would typically retrieve the user's profile data.
-    return Response({"message": "User profile retrieved successfully."})
+    profile = Profile.objects.get(user=request.user)
+    return Response({
+        "user": {
+            "email": request.user.email,
+            "first_name": request.user.first_name,
+            "last_name": request.user.last_name
+        },
+        "profile": {
+            "profession": profile.profession,
+            "years_of_experience": profile.years_of_experience,
+            "industry": profile.industry
+        }
+    })
 
 @api_view(['GET'])
 def industry_choices(request):
@@ -139,3 +152,23 @@ def industry_choices(request):
         for choice in Profile.INDUSTRY_CHOICES
         ]
     })
+
+class LogoutView(APIView):
+    """
+    Handle user logout by blacklisting the refresh token.
+    """
+    permission_classes = [IsAuthenticated] 
+
+    def post(self, request):
+        refresh_token = request.data.get("refresh")
+
+        if refresh_token is None:
+            return Response({"error": "No refresh token provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            token = RefreshToken(refresh_token)
+            token.blacklist()   # <<-- Invalida el refresh token
+        except TokenError:
+            return Response({"error": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"message": "Logout successful."}, status=status.HTTP_205_RESET_CONTENT)

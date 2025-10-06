@@ -38,9 +38,9 @@ const Header = ({ isScrolled }) => {
         </div>
 
         <nav
-          className={`hidden md:flex items-center space-x-8 ${
+          className={`hidden lg:flex items-center space-x-8 ${
             isMobileMenuOpen
-              ? "absolute top-full left-0 right-0 bg-white flex-col py-4 shadow-lg md:relative md:top-auto md:shadow-none md:bg-transparent md:flex-row md:py-0"
+              ? "absolute top-full left-0 right-0 bg-white flex-col py-4 shadow-lg lg:relative lg:top-auto lg:shadow-none lg:bg-transparent lg:flex-row lg:py-0"
               : ""
           }`}
         >
@@ -70,18 +70,29 @@ const Header = ({ isScrolled }) => {
           </button>
         </nav>
 
-        <button className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
-          onClick={() => navigate(routes.register)}>
-          Comenzar Ahora
-        </button>
+       {/* Botones de autenticación */}
+        <div className="hidden lg:flex space-x-2">
+          <button
+            className="bg-white border border-emerald-600 text-emerald-600 px-5 py-2 rounded-lg font-semibold transition-colors hover:bg-emerald-50"
+            onClick={() => navigate(routes.login)}
+          >
+            Iniciar Sesión
+          </button>
+          <button
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg font-semibold transition-colors"
+            onClick={() => navigate(routes.register)}
+          >
+            Registrarse
+          </button>
+        </div>
 
-        <button className="md:hidden text-emerald-600 text-xl" onClick={toggleMobileMenu}>
+        <button className="lg:hidden text-emerald-600 text-xl" onClick={toggleMobileMenu}>
           <i className={`fas ${isMobileMenuOpen ? "fa-times" : "fa-bars"}`}></i>
         </button>
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <nav className="absolute top-full left-0 right-0 bg-white flex flex-col py-4 shadow-lg md:hidden">
+          <nav className="absolute top-full left-0 right-0 bg-white flex flex-col py-4 shadow-lg lg:hidden">
             <button
               className="text-gray-600 hover:text-emerald-600 transition-colors font-medium py-2 px-4"
               onClick={() => scrollToSection("servicios")}
@@ -106,6 +117,26 @@ const Header = ({ isScrolled }) => {
             >
               Precios
             </button>
+            <div className="flex flex-col space-y-2 px-4 mt-2">
+              <button
+                className="bg-white border border-emerald-600 text-emerald-600 px-5 py-2 rounded-lg font-semibold transition-colors hover:bg-emerald-50"
+                onClick={() => {
+                  setIsMobileMenuOpen(false)
+                  navigate(routes.login)
+                }}
+              >
+                Iniciar Sesión
+              </button>
+              <button
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg font-semibold transition-colors"
+                onClick={() => {
+                  setIsMobileMenuOpen(false)
+                  navigate(routes.register)
+                }}
+              >
+                Registrarse
+              </button>
+            </div>
           </nav>
         )}
       </div>
