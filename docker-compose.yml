@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:15
+    container_name: cv_generator_db_container
+    environment:
+      - POSTGRES_DB=cv_generator_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432" # Mapea el puerto del contenedor a tu máquina local
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Persistencia de datos
+
+volumes:
+  postgres_data:

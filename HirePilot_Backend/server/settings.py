@@ -28,6 +28,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+AUTH_USER_MODEL = 'accounts.CustomUser'
 
 # Application definition
 
@@ -97,10 +98,16 @@ WSGI_APPLICATION = 'server.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# HirePilot_backend/settings.py
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'cv_generator_db',      # Coincide con POSTGRES_DB
+        'USER': 'postgres',             # Coincide con POSTGRES_USER
+        'PASSWORD': 'postgres',         # Coincide con POSTGRES_PASSWORD
+        'HOST': 'localhost',            # IMPORTANTE: Al correr Django localmente, usamos localhost
+        'PORT': '5432',                 # El puerto expuesto en tu docker-compose
     }
 }
 
