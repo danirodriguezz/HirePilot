@@ -23,5 +23,6 @@ from rest_framework_simplejwt.views import (
 import accounts.views as views
 
 urlpatterns = [
-    path('api/admin', admin.site.urls)
+    path('api/admin/', admin.site.urls),
+    path('api/registration-options/', views.RegistrationOptionsView.as_view(), name='registration-options'),
 ]

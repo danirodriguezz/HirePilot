@@ -27,12 +27,14 @@ const RegisterPage = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [industryChoices, setIndustryChoices] = useState([])
+  const [experienceChoices, setExperienceChoices] = useState([])
 
   // Cargar opciones de industria al montar el componente
   useEffect(() => {
-    api.get("http://127.0.0.1:8000/api/industry_choices")
+    api.get("registration-options/")
       .then((response) => {
-        setIndustryChoices(response.data.industry_choices)
+        setIndustryChoices(response.data.industries)
+        setExperienceChoices(response.data.experience_ranges)
       })
       .catch((error) => {
         console.error("Error al cargar las industrias:", error)
@@ -394,11 +396,11 @@ const RegisterPage = () => {
                     }`}
                   >
                     <option value="">Selecciona tu experiencia</option>
-                    <option value="0-1">Menos de 1 año</option>
-                    <option value="1-3">1-3 años</option>
-                    <option value="3-5">3-5 años</option>
-                    <option value="5-10">5-10 años</option>
-                    <option value="10+">Más de 10 años</option>
+                    {experienceChoices.map((choice) => (
+                      <option key={choice.value} value={choice.value}>
+                        {choice.label}
+                      </option>
+                    ))}
                   </select>
                   {errors.experience && <p className="mt-1 text-sm text-red-600">{errors.experience}</p>}
                 </div>
