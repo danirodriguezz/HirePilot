@@ -48,34 +48,71 @@ const LoginPage = () => {
   }
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (!validateForm()) return;
+    e.preventDefault();
+    if (!validateForm()) return;
 
-  setIsLoading(true);
-  try {
-    // Petición real al backend
-    const response = await api.post("/login", {
-      email: formData.email,      // ajusta los campos según tu backend
-      password: formData.password // asegúrate de que los nombres coinciden
-    });
+    setIsLoading(true);
+    setErrors({}); 
 
-    // Guardar tokens en localStorage
-    localStorage.setItem("access_token", response.data.access_token);
-    localStorage.setItem("refresh_token", response.data.refresh_token);
+    try {
+      const response = await api.post("login/", {
+        email: formData.email,
+        password: formData.password
+      });
 
-    // (Opcional) Guardar info del usuario
-    localStorage.setItem("user_id", response.data.user_id);
+      // 2. Destructuring basado en tu CustomTokenObtainPairSerializer
+      // SimpleJWT devuelve 'access' y 'refresh'. Tu serializer añade el resto.
+      const { access, refresh, user_id, name, plan, email } = response.data;
 
-    // Redirigir al dashboard
-    navigate("/dashboard");
-  } catch (error) {
-    setErrors({
-      general: error.response.data.error || "Error al iniciar sesión. Inténtalo de nuevo."
-    });
-  } finally {
-    setIsLoading(false);
-  }
-};
+      // 3. Guardar en LocalStorage
+      // Mapeamos la respuesta 'access' a nuestra key interna 'access_token'
+      localStorage.setItem("access_token", access);
+      localStorage.setItem("refresh_token", refresh);
+      
+      // Guardamos datos de usuario (útil para mostrar "Hola [Nombre]" en el dashboard)
+      // Tip Pro: Es mejor guardar esto un objeto JSON stringify
+      const userData = { user_id, name, email, plan };
+      localStorage.setItem("user_data", JSON.stringify(userData));
+
+      // 4. Configurar el header por defecto inmediatamente para evitar race conditions
+      // (Opcional, pero recomendado si haces llamadas justo al montar el Dashboard)
+      api.defaults.headers.common["Authorization"] = `Bearer ${access}`;
+
+      // 5. Redirigir
+      navigate("/dashboard");
+
+    } catch (error) {
+      console.error("Login Error:", error);
+      
+      // Manejo robusto de errores de DRF
+      let errorMessage = "Error al iniciar sesión.";
+
+      if (error.response) {
+        const data = error.response.data;
+        
+        // DRF suele devolver { detail: "No active account..." } para 401
+        if (data.detail) {
+          errorMessage = data.detail;
+        } 
+        // O errores de validación { non_field_errors: ["..."] }
+        else if (data.non_field_errors && data.non_field_errors.length > 0) {
+          errorMessage = data.non_field_errors[0];
+        }
+        // Fallback genérico
+        else {
+           errorMessage = "Credenciales inválidas o error en el servidor.";
+        }
+      } else if (error.request) {
+        errorMessage = "No se pudo conectar con el servidor.";
+      }
+
+      setErrors({
+        general: errorMessage
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50 flex items-center justify-center px-4 py-12">

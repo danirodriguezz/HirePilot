@@ -19,6 +19,7 @@ const Dashboard = () => {
   const [activeSection, setActiveSection] = useState("profile")
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
+  const [isInitialLoading, setIsInitialLoading] = useState(true)
   const profileMenuRef = useRef(null)
   const navigate = useNavigate()
   const [userData, setUserData] = useState({
@@ -47,24 +48,31 @@ const Dashboard = () => {
 
   // NUEVO: Obtener datos del usuario autenticado
   useEffect(() => {
-    async function fetchUser() {
-      try {
-        const res = await api.get("/profile")
-        setUserData(prev => {
-          const newState = {
-            ...prev,
-            profile: {
-              ...prev.profile,
-              firstName: res.data.user.first_name,
-              lastName: res.data.user.last_name,
-              email: res.data.user.email
-            },
-          };
-          return newState;
-        });
-    } catch (err) {
-      console.error("Error obteniendo usuario:", err)
-    }
+      async function fetchUser() {
+        try {
+          const res = await api.get("/me/")
+          setUserData(prev => {
+            const newState = {
+              ...prev,
+              profile: {
+                ...prev.profile,
+                firstName: res.data.first_name || "",
+                lastName: res.data.last_name || "",
+                email: res.data.email || "",
+                phone: res.data.profile?.phone || "",
+                summary: res.data.profile?.summary || ""
+              },
+            };
+            return newState;
+          });
+      } catch (err) {
+        console.error("Error obteniendo usuario:", err)
+        // Opcional: Redirigir al login si falla
+        if(err.response?.status === 401) navigate('/login');
+      } finally {
+        // 2. IMPORTANTE: Desactivar la carga pase lo que pase
+        setIsInitialLoading(false)
+      }
     }
     fetchUser()
   }, [])
@@ -84,10 +92,11 @@ const Dashboard = () => {
   try {
     const refreshToken = localStorage.getItem("refresh_token");
     if (refreshToken) {
-      await api.post("/logout", { refresh: refreshToken });
+      await api.post("/logout/", { refresh: refreshToken });
     }
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
+    localStorage.removeItem("user_data");
     navigate("/login");
   } catch (error) {
     console.error("Error al cerrar sesión:", error);
@@ -177,6 +186,17 @@ const Dashboard = () => {
       default:
         return <ProfileSection data={userData.profile} onUpdate={(data) => updateUserData("profile", data)} />
     }
+  }
+
+  if (isInitialLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
+          <p className="text-gray-600 font-medium">Cargando tu perfil...</p>
+        </div>
+      </div>
+    )
   }
 
   return (

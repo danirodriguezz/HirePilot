@@ -25,4 +25,10 @@ import accounts.views as views
 urlpatterns = [
     path('api/admin/', admin.site.urls),
     path('api/registration-options/', views.RegistrationOptionsView.as_view(), name='registration-options'),
+    path('api/register/', views.RegisterView.as_view(), name='register'),
+    path('api/login/', views.CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'), 
+    path('api/registration-options/', views.RegistrationOptionsView.as_view(), name='registration-options'),
+    path('api/me/', views.ManageUserView.as_view(), name='me'),
+    path('api/logout/', views.LogoutView.as_view(), name='logout'),
 ]

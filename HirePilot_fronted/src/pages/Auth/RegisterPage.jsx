@@ -1,10 +1,11 @@
 "use client"
 import api from "../../api/axiosInstance"
 import { useEffect, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { routes } from "../../routes/routes"
 
 const RegisterPage = () => {
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1)
   const [formData, setFormData] = useState({
     // Paso 1: Información básica
@@ -100,41 +101,62 @@ const RegisterPage = () => {
     setCurrentStep((prev) => prev - 1)
   }
 
-  const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (!validateStep(3)) return;
-  setIsLoading(true);
+const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateStep(3)) return;
+    setIsLoading(true);
 
-  try {
-    const response = await api.post(
-      "/register",
-      formData,
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
+    // 1. Preparamos el Payload para adaptar JS a Python
+    const payload = {
+      first_name: formData.firstName,
+      last_name: formData.lastName,
+      email: formData.email,
+      password: formData.password,
+      confirm_password: formData.confirmPassword, // El serializer lo espera así
+      profession: formData.profession, // El serializer lo mapeará a 'headline'
+      experience: formData.experience, // El serializer lo mapeará a 'years_of_experience'
+      industry: formData.industry,
+    };
+
+    try {
+      // Nota: RegisterView devuelve 201 Created y los datos del usuario, pero NO el token por defecto.
+      // Opción A: Hacer Auto-Login tras registro (Recomendado UX)
+      // Opción B: Redirigir a Login.
+      
+      // Vamos con Opción A simplificada: Creamos usuario y luego pedimos token.
+      
+      // 1. Registrar
+      await api.post("register/", payload); // Ajusta la URL según tu urls.py
+
+      // 2. Auto-Login (Obtener Token)
+      const loginResponse = await api.post("login/", {
+        email: formData.email,
+        password: formData.password
+      });
+
+      // 3. Guardar sesión
+      const { access, refresh, user_id, name } = loginResponse.data;
+      localStorage.setItem("access_token", access);
+      localStorage.setItem("refresh_token", refresh);
+      localStorage.setItem("user_id", user_id);
+      localStorage.setItem("user_name", name); // Opcional, útil para mostrar "Hola Juan"
+
+      navigate("/dashboard"); // Usando useNavigate como te sugerí antes
+
+    } catch (error) {
+      console.error(error);
+      if (error.response?.data) {
+        // Mapear errores del backend a tu estado de errores
+        // Ej: error.response.data.email -> "Este email ya existe"
+        setErrors({
+          general: "Error en el registro. Verifica los datos.",
+          ...error.response.data // Esto ayuda a ver qué campo falló
+        });
+      } else {
+        setErrors({ general: "Error de conexión." });
       }
-    );
-    localStorage.setItem("access_token", response.data.access_token);
-    localStorage.setItem("refresh_token", response.data.refresh_token);
-    localStorage.setItem("user_id", response.data.user_id);
-    window.location.href = "/dashboard";
-  } catch (error) {
-    if (error.response) {
-      // Errores desde el backend
-      setErrors({
-        general:
-          error.response.data.error ||
-          "Error al crear la cuenta. Inténtalo de nuevo.",
-      });
-    } else {
-      // Errores de red u otros
-      setErrors({
-        general: "No se pudo conectar con el servidor. Inténtalo más tarde.",
-      });
-    }
-  } finally {
-    setIsLoading(false);
+    } finally {
+      setIsLoading(false);
     }
   };
 
