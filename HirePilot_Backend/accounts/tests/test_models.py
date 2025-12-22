@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.db.utils import IntegrityError
 from datetime import date
-from .models import (
+from accounts.models import (
     UserProfile, WorkExperience, WorkAchievement, 
     Education, Skill, JobPosting, TailoredCV
 )
@@ -56,30 +56,33 @@ class UserProfileTest(TestCase):
         self.user = User.objects.create_user(email="profile@saas.com", password="pw")
 
     def test_profile_creation_and_enums(self):
-        """Prueba la creación del perfil y el uso correcto de los Choices"""
-        profile = UserProfile.objects.create(
-            user=self.user,
-            headline="Backend Ninja",
-            summary="Python Lover",
-            years_of_experience=UserProfile.ExperienceRange.FIVE_TO_SIX,
-            industry=UserProfile.Industry.TECH,
-            phone="+123456789"
-        )
+        """Prueba que podemos editar el perfil autocreado y usar los Choices."""
+        profile = self.user.profile 
 
-        # Verificamos que se guardó el valor correcto ('5-6')
+        # 2. Actualizamos los datos
+        profile.headline = "Backend Ninja"
+        profile.summary = "Python Lover"
+        profile.years_of_experience = UserProfile.ExperienceRange.FIVE_TO_SIX
+        profile.industry = UserProfile.Industry.TECH
+        profile.phone = "+123456789"
+        profile.save()
+
+        # 3. Verificamos (Refrescar desde BD para asegurar persistencia)
+        profile.refresh_from_db()
+
         self.assertEqual(profile.years_of_experience, '5-6')
-        # Verificamos que Django puede recuperar el texto legible ('Entre 5 y 6 años')
         self.assertEqual(profile.get_years_of_experience_display(), 'Entre 5 y 6 años')
-        
-        # Probamos el __str__
         self.assertIn("Backend Ninja", str(profile))
 
     def test_profile_cascade_delete(self):
         """Si borramos al usuario, el perfil debe morir (CASCADE)"""
-        UserProfile.objects.create(
-            user=self.user, headline="Test", summary="Test", phone="123"
-        )
+        # Verificamos que el perfil existe al inicio (creado por signals.py)
+        self.assertTrue(UserProfile.objects.filter(user=self.user).exists())
+        
+        # Borramos el usuario
         self.user.delete()
+        
+        # El perfil debería haber desaparecido
         self.assertEqual(UserProfile.objects.count(), 0)
 
 
