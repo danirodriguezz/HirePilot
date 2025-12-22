@@ -3,22 +3,40 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from .models import CustomUser, UserProfile
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework.exceptions import AuthenticationFailed
 
 User = get_user_model()
 
 # --- LOGIN PERSONALIZADO ---
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
-    Personalizamos el login para devolver datos extra además del token.
+    Personalizamos el login para devolver datos extra y 
+    BLOQUEAR usuarios no verificados.
     """
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        # Añadir claims personalizados al token encriptado si quieres
+        token['email'] = user.email
+        token['is_verified'] = user.is_verified
+        return token
+
     def validate(self, attrs):
+        # 1. Ejecuta la validación estándar (verifica email y password)
         data = super().validate(attrs)
-        
-        # Agregamos datos del usuario a la respuesta JSON
+
+        # 2. A este punto, la contraseña es correcta.
+        # Ahora verificamos si el usuario confirmó su email.
+        if not self.user.is_verified:
+            raise AuthenticationFailed(
+                detail="Tu cuenta aún no ha sido verificada. Por favor revisa tu correo electrónico.",
+                code="account_not_verified"
+            )
+
+        # 3. Si todo está bien, añadimos datos extra a la respuesta JSON
         data['user_id'] = self.user.id
+        data['name'] = self.user.first_name
         data['email'] = self.user.email
-        data['name'] = f"{self.user.first_name} {self.user.last_name}"
-        data['plan'] = self.user.plan
         
         return data
 
@@ -89,7 +107,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
     profile = UserProfileSerializer(read_only=True) # Nested Serializer
 
     class Meta:
-        model = CustomUser
+        model = User
         fields = [
             'id', 
             'email', 

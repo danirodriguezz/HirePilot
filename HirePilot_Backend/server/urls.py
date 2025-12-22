@@ -31,4 +31,5 @@ urlpatterns = [
     path('api/registration-options/', views.RegistrationOptionsView.as_view(), name='registration-options'),
     path('api/me/', views.ManageUserView.as_view(), name='me'),
     path('api/logout/', views.LogoutView.as_view(), name='logout'),
+    path('api/verify-email/', views.VerifyEmailView.as_view(), name='verify-email'),
 ]

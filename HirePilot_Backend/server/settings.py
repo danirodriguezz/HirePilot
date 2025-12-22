@@ -53,6 +53,7 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
         'rest_framework.renderers.BrowsableAPIRenderer',
+        'rest_framework.permissions.IsAuthenticated',
     ]
 }
 
@@ -154,3 +155,12 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+# Define la vida útil del token en SEGUNDOS.
+# 60 segundos * 60 minutos * 24 horas = 86400
+PASSWORD_RESET_TIMEOUT = 86400
+
+# Configuración de Email para Desarrollo (Imprime en consola)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Cuando pases a producción, cambiarás esto por SMTP (Gmail, SendGrid, AWS SES)
+DEFAULT_FROM_EMAIL = 'noreply@hirepilot.com'

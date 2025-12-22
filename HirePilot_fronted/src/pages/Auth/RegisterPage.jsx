@@ -7,6 +7,7 @@ import { routes } from "../../routes/routes"
 const RegisterPage = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1)
+  const [isRegistrationSuccess, setIsRegistrationSuccess] = useState(false);
   const [formData, setFormData] = useState({
     // Paso 1: Información básica
     firstName: "",
@@ -103,54 +104,38 @@ const RegisterPage = () => {
 
 const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateStep(3)) return;
+    
+    if (!validateStep(3)) return; 
+    
     setIsLoading(true);
 
-    // 1. Preparamos el Payload para adaptar JS a Python
     const payload = {
       first_name: formData.firstName,
       last_name: formData.lastName,
       email: formData.email,
       password: formData.password,
-      confirm_password: formData.confirmPassword, // El serializer lo espera así
-      profession: formData.profession, // El serializer lo mapeará a 'headline'
-      experience: formData.experience, // El serializer lo mapeará a 'years_of_experience'
+      confirm_password: formData.confirmPassword,
+      profession: formData.profession, 
+      experience: formData.experience, 
       industry: formData.industry,
+      // Mapea el plan si el backend espera valores en mayúsculas o específicos
+      plan: formData.plan.toUpperCase(), 
     };
 
     try {
-      // Nota: RegisterView devuelve 201 Created y los datos del usuario, pero NO el token por defecto.
-      // Opción A: Hacer Auto-Login tras registro (Recomendado UX)
-      // Opción B: Redirigir a Login.
+      // 1. Solo registramos. NO hacemos login automático.
+      await api.post("register/", payload);
       
-      // Vamos con Opción A simplificada: Creamos usuario y luego pedimos token.
-      
-      // 1. Registrar
-      await api.post("register/", payload); // Ajusta la URL según tu urls.py
-
-      // 2. Auto-Login (Obtener Token)
-      const loginResponse = await api.post("login/", {
-        email: formData.email,
-        password: formData.password
-      });
-
-      // 3. Guardar sesión
-      const { access, refresh, user_id, name } = loginResponse.data;
-      localStorage.setItem("access_token", access);
-      localStorage.setItem("refresh_token", refresh);
-      localStorage.setItem("user_id", user_id);
-      localStorage.setItem("user_name", name); // Opcional, útil para mostrar "Hola Juan"
-
-      navigate("/dashboard"); // Usando useNavigate como te sugerí antes
+      // 2. Cambiamos el estado para mostrar la pantalla de "Email enviado"
+      setIsRegistrationSuccess(true);
+      window.scrollTo(0, 0); // Subir scroll arriba
 
     } catch (error) {
       console.error(error);
       if (error.response?.data) {
-        // Mapear errores del backend a tu estado de errores
-        // Ej: error.response.data.email -> "Este email ya existe"
         setErrors({
           general: "Error en el registro. Verifica los datos.",
-          ...error.response.data // Esto ayuda a ver qué campo falló
+          ...error.response.data
         });
       } else {
         setErrors({ general: "Error de conexión." });
@@ -173,6 +158,37 @@ const handleSubmit = async (e) => {
   const passwordStrength = getPasswordStrength(formData.password)
   const strengthColors = ["bg-red-500", "bg-orange-500", "bg-yellow-500", "bg-blue-500", "bg-green-500"]
   const strengthLabels = ["Muy débil", "Débil", "Regular", "Fuerte", "Muy fuerte"]
+
+  // --- RENDERIZADO CONDICIONAL: PANTALLA DE ÉXITO ---
+  if (isRegistrationSuccess) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50 flex items-center justify-center px-4 py-12">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i className="fas fa-envelope-open-text text-4xl text-emerald-600"></i>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">¡Casi estamos listos!</h2>
+            <p className="text-gray-600 mb-6">
+                Hemos enviado un correo de confirmación a <strong>{formData.email}</strong>.
+                <br /><br />
+                Por favor, haz clic en el enlace del correo para activar tu cuenta y empezar a crear CVs increíbles.
+            </p>
+            
+            <div className="space-y-4">
+                <Link 
+                    to={routes.login} 
+                    className="block w-full px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors font-medium"
+                >
+                    Ir a Iniciar Sesión
+                </Link>
+                <p className="text-sm text-gray-500">
+                    ¿No recibiste el correo? <button className="text-emerald-600 font-medium hover:underline">Reenviar</button>
+                </p>
+            </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50 flex items-center justify-center px-4 py-12">

@@ -3,5 +3,6 @@ export const routes = {
   notFound: '*',
   login: '/login',
   register: '/register',
-  dashboard: '/dashboard'
+  dashboard: '/dashboard',
+  verifyEmail: '/verify-email/:uid/:token',
 };

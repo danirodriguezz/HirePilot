@@ -35,6 +35,10 @@ const router = createBrowserRouter([
     path: routes.notFound,
     element: <NotFoundPage />,
   },
+  {
+    path: routes.verifyEmail,
+    element: <AuthPages.VerifyEmail />,
+  }
 ])
 
 createRoot(document.getElementById('root')).render(
