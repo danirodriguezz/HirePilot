@@ -240,15 +240,22 @@ const Dashboard = () => {
                   <i className="fas fa-chevron-down text-xs text-gray-400"></i>
                 </button>
                 {isProfileMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-40 bg-white border rounded-lg shadow-lg z-50">
+                <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden transform transition-all duration-200">
+                  {/* Si tuvieras más opciones, irían aquí arriba con un separador */}
+                  
+                  <div className="p-1">
                     <button
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 group"
                       onClick={handleLogout}
                     >
-                      Cerrar sesión
+                      <div className="w-8 h-8 rounded-full bg-gray-50 group-hover:bg-red-100 flex items-center justify-center transition-colors">
+                        <i className="fas fa-sign-out-alt text-gray-400 group-hover:text-red-500 text-xs"></i>
+                      </div>
+                      <span>Cerrar sesión</span>
                     </button>
                   </div>
-                )}
+                </div>
+              )}
               </div>
             </div>
           </div>
