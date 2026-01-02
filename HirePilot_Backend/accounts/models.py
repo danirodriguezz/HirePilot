@@ -78,9 +78,10 @@ class UserProfile(models.Model):
         help_text="Ej: Senior Full Stack Developer"
     )
 
-    summary = models.TextField()
+    summary = models.TextField(null=True, blank=True)
     linkedin_url = models.URLField(max_length=255, blank=True, null=True)
-    phone = models.CharField(max_length=20)
+    personal_website = models.URLField(max_length=255, blank=True, null=True, help_text="Sitio web personal o portafolio")
+    phone = models.CharField(max_length=20, null=True, blank=True)
     # 3. CAMBIO AQUÍ: De IntegerField a CharField con choices
     years_of_experience = models.CharField(
         max_length=10, # Suficiente para guardar '1-2', '6+', etc.

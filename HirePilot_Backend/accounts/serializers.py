@@ -95,16 +95,18 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'headline', 
             'summary', 
             'linkedin_url', 
-            'phone', 
+            'phone',
+            'personal_website',
             'years_of_experience', 
             'years_of_experience_display', # Para mostrar "Entre 1 y 2 años" en el front
             'industry',
             'industry_display'
         ]
+        read_only_fields = ['industry_display', 'industry']
 
 # 2. Serializer Principal del Usuario (User + Profile)
 class UserDetailSerializer(serializers.ModelSerializer):
-    profile = UserProfileSerializer(read_only=True) # Nested Serializer
+    profile = UserProfileSerializer() # Nested Serializer
 
     class Meta:
         model = User
@@ -117,3 +119,24 @@ class UserDetailSerializer(serializers.ModelSerializer):
             'is_verified', 
             'profile'
         ]
+        read_only_fields = ['email', 'is_verified', 'plan']
+    
+    # SOBRESCRIBIMOS EL MÉTODO UPDATE
+    def update(self, instance, validated_data):
+        # 1. Extraemos los datos del perfil (si vienen en la petición)
+        profile_data = validated_data.pop('profile', None)
+
+        # 2. Actualizamos los datos del Usuario base (first_name, last_name)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # 3. Actualizamos los datos del Perfil relacionado
+        if profile_data:
+            # Accedemos a la relación inversa definida en models.py (related_name='profile')
+            profile = instance.profile
+            for attr, value in profile_data.items():
+                setattr(profile, attr, value)
+            profile.save()
+
+        return instance

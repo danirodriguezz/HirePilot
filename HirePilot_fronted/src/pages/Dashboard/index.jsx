@@ -28,10 +28,11 @@ const Dashboard = () => {
       lastName: "",
       email: "",
       phone: "",
-      location: "",
+      profession: "",
       linkedin: "",
       website: "",
       summary: "",
+      yearsOfExperience: "",
     },
     experience: [],
     education: [],
@@ -60,7 +61,10 @@ const Dashboard = () => {
                 lastName: res.data.last_name || "",
                 email: res.data.email || "",
                 phone: res.data.profile?.phone || "",
-                summary: res.data.profile?.summary || ""
+                summary: res.data.profile?.summary || "",
+                profession: res.data.profile?.headline || "",
+                yearsOfExperience: res.data.profile?.years_of_experience || "",
+                linkedin: res.data.profile?.linkedin_url || "",
               },
             };
             return newState;
@@ -220,11 +224,6 @@ const Dashboard = () => {
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="hidden sm:flex items-center gap-2 text-sm text-gray-600">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                Datos guardados automáticamente
-              </div>
-
               <div className="relative" ref={profileMenuRef}>
                 <button
                   className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
