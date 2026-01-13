@@ -106,6 +106,7 @@ class WorkExperience(models.Model):
     )
     company = models.CharField(max_length=255)
     role = models.CharField(max_length=255)
+    location = models.CharField(max_length=255, blank=True, default="")
     current_job = models.BooleanField(default=False)
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)
