@@ -8,8 +8,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .models import UserProfile, WorkExperience, WorkAchievement
-from .serializers import UserRegistrationSerializer, CustomTokenObtainPairSerializer, UserDetailSerializer, WorkExperienceSerializer
+from .models import UserProfile, WorkExperience, WorkAchievement, Education
+from .serializers import UserRegistrationSerializer, CustomTokenObtainPairSerializer, UserDetailSerializer, WorkExperienceSerializer, EducationSerializer
 
 
 User = get_user_model()
@@ -128,4 +128,16 @@ class WorkExperienceViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         # Inyectamos el usuario logueado al crear el registro
+        serializer.save(user=self.request.user)
+
+class EducationViewSet(viewsets.ModelViewSet):
+    serializer_class = EducationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # El usuario solo ve SU propia educación
+        return Education.objects.filter(user=self.request.user).order_by('-start_date')
+
+    def perform_create(self, serializer):
+        # Asignamos automáticamente el usuario logueado
         serializer.save(user=self.request.user)

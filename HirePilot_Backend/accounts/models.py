@@ -139,7 +139,18 @@ class Education(models.Model):
     )
     institution = models.CharField(max_length=255)
     degree = models.CharField(max_length=255)
-    # Sugerencia: Podrías añadir fechas aquí también en el futuro si es relevante.
+    field_of_study = models.CharField(max_length=255, blank=True, default="")
+    location = models.CharField(max_length=255, blank=True, default="")
+
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    current = models.BooleanField(default=False)
+
+    grade = models.CharField(max_length=50, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-start_date'] # Ordenar por fecha, lo más reciente primero
 
     def __str__(self):
         return f"{self.degree} at {self.institution}"

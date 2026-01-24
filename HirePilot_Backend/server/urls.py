@@ -26,6 +26,7 @@ import accounts.views as views
 # Usamos el Router para manejar las viewsets automáticamente
 router = DefaultRouter()
 router.register(r'experience', views.WorkExperienceViewSet, basename='work-experience')
+router.register(r'education', views.EducationViewSet, basename='education')
 
 urlpatterns = [
     path('api/admin/', admin.site.urls),
@@ -37,6 +38,5 @@ urlpatterns = [
     path('api/me/', views.ManageUserView.as_view(), name='me'),
     path('api/logout/', views.LogoutView.as_view(), name='logout'),
     path('api/verify-email/', views.VerifyEmailView.as_view(), name='verify-email'),
-    # Aquí incluimos las rutas del router. Esto crea /api/experience/ y /api/experience/<id>/
     path('api/', include(router.urls)),
 ]
