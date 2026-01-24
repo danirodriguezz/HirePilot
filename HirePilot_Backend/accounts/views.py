@@ -1,4 +1,4 @@
-from rest_framework import generics, status, permissions
+from rest_framework import generics, status, permissions, viewsets
 from django.contrib.auth import get_user_model
 from django.utils.http import urlsafe_base64_decode
 from django.contrib.auth.tokens import default_token_generator
@@ -8,8 +8,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .models import UserProfile
-from .serializers import UserRegistrationSerializer, CustomTokenObtainPairSerializer, UserDetailSerializer
+from .models import UserProfile, WorkExperience, WorkAchievement
+from .serializers import UserRegistrationSerializer, CustomTokenObtainPairSerializer, UserDetailSerializer, WorkExperienceSerializer
 
 
 User = get_user_model()
@@ -117,3 +117,15 @@ class LogoutView(APIView):
             return Response(status=status.HTTP_205_RESET_CONTENT)
         except Exception as e:
             return Response(status=status.HTTP_400_BAD_REQUEST)
+
+class WorkExperienceViewSet(viewsets.ModelViewSet):
+    serializer_class = WorkExperienceSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # IMPORTANTE: Filtramos para que el usuario solo vea SU propia experiencia
+        return WorkExperience.objects.filter(user=self.request.user).order_by('-start_date')
+
+    def perform_create(self, serializer):
+        # Inyectamos el usuario logueado al crear el registro
+        serializer.save(user=self.request.user)

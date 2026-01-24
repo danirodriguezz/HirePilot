@@ -4,6 +4,7 @@ from django.db import transaction
 from .models import CustomUser, UserProfile
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.exceptions import AuthenticationFailed
+from .models import WorkExperience, WorkAchievement
 
 User = get_user_model()
 
@@ -138,5 +139,63 @@ class UserDetailSerializer(serializers.ModelSerializer):
             for attr, value in profile_data.items():
                 setattr(profile, attr, value)
             profile.save()
+
+        return instance
+    
+# 1. Serializer para los Logros Individuales
+class WorkAchievementSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WorkAchievement
+        fields = ['id', 'description', 'keywords']
+        read_only_fields = ['id']
+
+# 2. Serializer para la Experiencia Laboral
+class WorkExperienceSerializer(serializers.ModelSerializer):
+    # Nested Serializer: Permite ver y enviar logros dentro del objeto experiencia
+    achievements = WorkAchievementSerializer(many=True, required=False)
+
+    class Meta:
+        model = WorkExperience
+        fields = [
+            'id', 
+            'company', 
+            'role', 
+            'location',
+            'description', # Nota: No vi 'location' en tu models.py, asegúrate de añadirlo o quitarlo
+            'current_job', 
+            'start_date', 
+            'end_date', 
+            'achievements'
+        ]
+        read_only_fields = ['id']
+
+    def create(self, validated_data):
+        # Extraemos los logros del payload
+        achievements_data = validated_data.pop('achievements', [])
+        
+        # Creamos la experiencia vinculada al usuario (pasado en save() desde la vista)
+        work_experience = WorkExperience.objects.create(**validated_data)
+        
+        # Creamos los logros asociados
+        for achievement_data in achievements_data:
+            WorkAchievement.objects.create(work_experience=work_experience, **achievement_data)
+            
+        return work_experience
+
+    def update(self, instance, validated_data):
+        achievements_data = validated_data.pop('achievements', None)
+        
+        # Actualizamos campos simples de la experiencia
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # Lógica de actualización de logros (Estrategia: Reemplazo completo para simplificar)
+        # Si envían logros, borramos los viejos y creamos los nuevos.
+        # Una estrategia más compleja implicaría comparar IDs para hacer updates parciales via PATCH.
+        if achievements_data is not None:
+            instance.achievements.all().delete()
+            for achievement_data in achievements_data:
+                WorkAchievement.objects.create(work_experience=instance, **achievement_data)
 
         return instance

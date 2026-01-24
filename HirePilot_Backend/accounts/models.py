@@ -104,6 +104,7 @@ class WorkExperience(models.Model):
         on_delete=models.CASCADE, 
         related_name='work_experiences'
     )
+    description = models.TextField(blank=True, null=True)
     company = models.CharField(max_length=255)
     role = models.CharField(max_length=255)
     location = models.CharField(max_length=255, blank=True, default="")
