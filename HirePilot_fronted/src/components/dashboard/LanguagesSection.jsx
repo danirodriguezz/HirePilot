@@ -1,40 +1,136 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { languageService } from "../../services/languageService" // Importar servicio
+import ConfirmModal from "../ui/ConfirmModal" // Importar Modal
+import toast from "react-hot-toast" // Importar Toast
 
-const LanguagesSection = ({ data, onUpdate }) => {
-  const [languages, setLanguages] = useState(data)
+// --- MAPPERS (Frontend <-> Backend) ---
+const mapToBackend = (lang) => ({
+  language: lang.name,          // Front: name -> Back: language
+  level: lang.proficiency,      // Front: proficiency -> Back: level
+  certificate: lang.certificates // Front: certificates -> Back: certificate
+})
 
+const mapToFrontend = (apiData) => ({
+  id: apiData.id,
+  name: apiData.language,
+  proficiency: apiData.level || "B1", // Valor por defecto si viene nulo
+  certificates: apiData.certificate || "",
+})
+
+const LanguagesSection = () => {
+  const [languages, setLanguages] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  // Estados del Modal
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [itemToDelete, setItemToDelete] = useState(null)
+
+  // Desglose de niveles por separado (Marco Común Europeo)
   const proficiencyLevels = [
-    { value: "basic", label: "Básico (A1-A2)" },
-    { value: "intermediate", label: "Intermedio (B1-B2)" },
-    { value: "advanced", label: "Avanzado (C1-C2)" },
-    { value: "native", label: "Nativo" },
+    { value: "A1", label: "A1 - Acceso (Básico)" },
+    { value: "A2", label: "A2 - Plataforma (Básico)" },
+    { value: "B1", label: "B1 - Umbral (Intermedio)" },
+    { value: "B2", label: "B2 - Avanzado (Intermedio Alto)" },
+    { value: "C1", label: "C1 - Dominio (Operativo Eficaz)" },
+    { value: "C2", label: "C2 - Maestría" },
+    { value: "Nativo", label: "Nativo / Bilingüe" },
   ]
 
+  // 1. Cargar datos
+  useEffect(() => {
+    loadLanguages()
+  }, [])
+
+  const loadLanguages = async () => {
+    try {
+      const data = await languageService.getAll()
+      setLanguages(data.map(mapToFrontend))
+    } catch (err) {
+      console.error(err)
+      toast.error("Error cargando idiomas")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 2. Guardar (Crear o Editar)
+  const handleSave = async (langLocal) => {
+    const saveAction = async () => {
+      const payload = mapToBackend(langLocal)
+      let savedData;
+
+      if (langLocal.id && typeof langLocal.id !== 'number') {
+         // Crear (ID temporal)
+         savedData = await languageService.create(payload)
+      } else {
+         // Actualizar (ID real)
+         savedData = await languageService.update(langLocal.id, payload)
+      }
+
+      setLanguages(prev => prev.map(l => 
+        l.id === langLocal.id ? mapToFrontend(savedData) : l
+      ))
+      return savedData
+    }
+
+    toast.promise(saveAction(), {
+      loading: 'Guardando...',
+      success: '¡Idioma guardado!',
+      error: 'Error al guardar',
+    })
+  }
+
+  // 3. Borrar
+  const openDeleteModal = (id) => {
+    setItemToDelete(id)
+    setIsDeleteModalOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return
+    setIsDeleteModalOpen(false)
+
+    const id = itemToDelete
+    const isTemp = typeof id !== 'number'
+
+    const deleteAction = async () => {
+      if (!isTemp) await languageService.delete(id)
+      setLanguages(prev => prev.filter(l => l.id !== id))
+    }
+
+    if (isTemp) {
+      deleteAction()
+      toast.success("Borrador eliminado")
+    } else {
+      toast.promise(deleteAction(), {
+        loading: 'Eliminando...',
+        success: 'Idioma eliminado',
+        error: 'No se pudo eliminar',
+      })
+    }
+    setItemToDelete(null)
+  }
+
+  // 4. Gestión de estado local
   const addLanguage = () => {
     const newLanguage = {
-      id: Date.now(),
+      id: `temp-${Date.now()}`,
       name: "",
-      proficiency: "intermediate",
+      proficiency: "B1", // Valor por defecto
       certificates: "",
     }
-    const updatedLanguages = [...languages, newLanguage]
-    setLanguages(updatedLanguages)
-    onUpdate(updatedLanguages)
+    setLanguages([newLanguage, ...languages])
   }
 
   const updateLanguage = (id, field, value) => {
-    const updatedLanguages = languages.map((lang) => (lang.id === id ? { ...lang, [field]: value } : lang))
-    setLanguages(updatedLanguages)
-    onUpdate(updatedLanguages)
+    setLanguages(prev => prev.map((lang) => 
+      (lang.id === id ? { ...lang, [field]: value } : lang)
+    ))
   }
 
-  const deleteLanguage = (id) => {
-    const updatedLanguages = languages.filter((lang) => lang.id !== id)
-    setLanguages(updatedLanguages)
-    onUpdate(updatedLanguages)
-  }
+  if (loading) return <div className="p-6 text-center text-gray-500">Cargando idiomas...</div>
 
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6">
@@ -52,6 +148,14 @@ const LanguagesSection = ({ data, onUpdate }) => {
         </button>
       </div>
 
+      <ConfirmModal 
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="¿Eliminar idioma?"
+        message="Se eliminará este idioma de tu perfil permanentemente."
+      />
+
       {languages.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
           <i className="fas fa-language text-4xl mb-4"></i>
@@ -61,52 +165,70 @@ const LanguagesSection = ({ data, onUpdate }) => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {languages.map((language, index) => (
-            <div key={language.id} className="border border-gray-200 rounded-lg p-4">
-              <div className="flex justify-between items-start mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Idioma {index + 1}</h3>
-                <button onClick={() => deleteLanguage(language.id)} className="text-red-600 hover:text-red-700 p-1">
-                  <i className="fas fa-trash text-sm"></i>
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Idioma</label>
-                  <input
-                    type="text"
-                    value={language.name}
-                    onChange={(e) => updateLanguage(language.id, "name", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    placeholder="Ej: Inglés, Francés, Alemán"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Nivel</label>
-                  <select
-                    value={language.proficiency}
-                    onChange={(e) => updateLanguage(language.id, "proficiency", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            <div key={language.id} className="border border-gray-200 rounded-lg p-4 flex flex-col justify-between h-full">
+              {/* Contenido Superior */}
+              <div>
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="text-lg font-medium text-gray-900">Idioma {languages.length - index}</h3>
+                  <button 
+                    onClick={() => openDeleteModal(language.id)} 
+                    className="text-red-600 hover:text-red-700 p-1 transition-colors"
                   >
-                    {proficiencyLevels.map((level) => (
-                      <option key={level.value} value={level.value}>
-                        {level.label}
-                      </option>
-                    ))}
-                  </select>
+                    <i className="fas fa-trash text-sm"></i>
+                  </button>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Certificados (opcional)</label>
-                  <input
-                    type="text"
-                    value={language.certificates}
-                    onChange={(e) => updateLanguage(language.id, "certificates", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    placeholder="Ej: TOEFL 110, DELE C1"
-                  />
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Idioma</label>
+                    <input
+                      type="text"
+                      value={language.name}
+                      onChange={(e) => updateLanguage(language.id, "name", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      placeholder="Ej: Inglés, Francés"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Nivel</label>
+                    <select
+                      value={language.proficiency}
+                      onChange={(e) => updateLanguage(language.id, "proficiency", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                    >
+                      {proficiencyLevels.map((level) => (
+                        <option key={level.value} value={level.value}>
+                          {level.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Certificados (opcional)</label>
+                    <input
+                      type="text"
+                      value={language.certificates}
+                      onChange={(e) => updateLanguage(language.id, "certificates", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      placeholder="Ej: TOEFL, DELE, First..."
+                    />
+                  </div>
                 </div>
               </div>
+
+              {/* Botón Guardar (Parte inferior de la tarjeta) */}
+              <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end">
+                  <button 
+                      onClick={() => handleSave(language)}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md transition-all shadow-sm hover:shadow-md text-sm font-medium flex items-center gap-2"
+                  >
+                      <i className="fas fa-save"></i>
+                      Guardar
+                  </button>
+              </div>
+
             </div>
           ))}
         </div>

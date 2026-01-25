@@ -174,6 +174,22 @@ class Certificate(models.Model):
 
     def __str__(self):
         return f"{self.name} by {self.issuing_organization}"
+    
+class Language(models.Model):
+    user = models.ForeignKey(
+        CustomUser, 
+        on_delete=models.CASCADE, 
+        related_name='languages'
+    )
+    language = models.CharField(max_length=100) # Ej: Inglés, Francés
+    level = models.CharField(max_length=100) # Ej: Nativo, C1, Avanzado
+    certificate = models.CharField(max_length=255, blank=True, null=True) # Ej: Cambridge CAE
+
+    class Meta:
+        ordering = ['language'] # Orden alfabético
+
+    def __str__(self):
+        return f"{self.language} ({self.level})"
 
 class Skill(models.Model):
     user = models.ForeignKey(
