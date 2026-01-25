@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from .models import CustomUser, Education, UserProfile
+from .models import CustomUser, Education, UserProfile, Certificate
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.exceptions import AuthenticationFailed
 from .models import WorkExperience, WorkAchievement
@@ -212,6 +212,21 @@ class EducationSerializer(serializers.ModelSerializer):
             'end_date',
             'current',
             'grade',        
+            'description'
+        ]
+        read_only_fields = ['id']
+
+class CertificateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Certificate
+        fields = [
+            'id',
+            'name',
+            'issuing_organization',
+            'issue_date',
+            'expiration_date',
+            'credential_id',
+            'credential_url',
             'description'
         ]
         read_only_fields = ['id']

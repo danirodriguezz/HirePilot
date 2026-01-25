@@ -8,8 +8,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .models import UserProfile, WorkExperience, WorkAchievement, Education
-from .serializers import UserRegistrationSerializer, CustomTokenObtainPairSerializer, UserDetailSerializer, WorkExperienceSerializer, EducationSerializer
+from .models import UserProfile, WorkExperience, WorkAchievement, Education, Certificate
+from .serializers import UserRegistrationSerializer, CustomTokenObtainPairSerializer, UserDetailSerializer, WorkExperienceSerializer, EducationSerializer, CertificateSerializer
 
 
 User = get_user_model()
@@ -140,4 +140,16 @@ class EducationViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         # Asignamos automáticamente el usuario logueado
+        serializer.save(user=self.request.user)
+
+class CertificateViewSet(viewsets.ModelViewSet):
+    serializer_class = CertificateSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # El usuario solo ve SUS propios certificados
+        return Certificate.objects.filter(user=self.request.user).order_by('-issue_date')
+
+    def perform_create(self, serializer):
+        # Asignar automáticamente el certificado al usuario autenticado
         serializer.save(user=self.request.user)

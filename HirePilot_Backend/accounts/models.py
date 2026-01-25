@@ -155,6 +155,26 @@ class Education(models.Model):
     def __str__(self):
         return f"{self.degree} at {self.institution}"
 
+class Certificate(models.Model):
+    user = models.ForeignKey(
+        CustomUser, 
+        on_delete=models.CASCADE, 
+        related_name='certificates'
+    )
+    name = models.CharField(max_length=255) # Nombre del certificado
+    issuing_organization = models.CharField(max_length=255) # Organización emisora
+    issue_date = models.DateField() # Fecha de emisión
+    expiration_date = models.DateField(null=True, blank=True) # Fecha de expiración (opcional)
+    credential_id = models.CharField(max_length=255, blank=True, null=True) # ID Credencial (opcional)
+    credential_url = models.URLField(max_length=500, blank=True, null=True) # URL verificación (opcional)
+    description = models.TextField(blank=True, null=True) # Descripción (opcional)
+
+    class Meta:
+        ordering = ['-issue_date'] # Los más recientes primero
+
+    def __str__(self):
+        return f"{self.name} by {self.issuing_organization}"
+
 class Skill(models.Model):
     user = models.ForeignKey(
         CustomUser, 

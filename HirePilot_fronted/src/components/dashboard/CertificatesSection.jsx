@@ -1,13 +1,119 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { certificateService } from "../../services/certificateService"
+import ConfirmModal from "../ui/ConfirmModal"
+import toast from "react-hot-toast"
 
-const CertificatesSection = ({ data, onUpdate }) => {
-  const [certificates, setCertificates] = useState(data)
+// --- MAPPERS (Frontend <-> Backend) ---
+const mapToBackend = (cert) => ({
+  name: cert.name,
+  issuing_organization: cert.issuer, // Front: issuer -> Back: issuing_organization
+  issue_date: cert.date ? `${cert.date}-01` : null,
+  expiration_date: cert.expiryDate ? `${cert.expiryDate}-01` : null,
+  credential_id: cert.credentialId,
+  credential_url: cert.url,          // Front: url -> Back: credential_url
+  description: cert.description,
+})
 
+const mapToFrontend = (apiData) => ({
+  id: apiData.id,
+  name: apiData.name,
+  issuer: apiData.issuing_organization,
+  date: apiData.issue_date ? apiData.issue_date.substring(0, 7) : "",
+  expiryDate: apiData.expiration_date ? apiData.expiration_date.substring(0, 7) : "",
+  credentialId: apiData.credential_id || "",
+  url: apiData.credential_url || "",
+  description: apiData.description || "",
+})
+
+const CertificatesSection = () => {
+  const [certificates, setCertificates] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  // Estados del Modal
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [itemToDelete, setItemToDelete] = useState(null)
+
+  // 1. Cargar datos
+  useEffect(() => {
+    loadCertificates()
+  }, [])
+
+  const loadCertificates = async () => {
+    try {
+      const data = await certificateService.getAll()
+      setCertificates(data.map(mapToFrontend))
+    } catch (err) {
+      console.error(err)
+      toast.error("Error al cargar certificados")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 2. Guardar (Crear o Editar)
+  const handleSave = async (certLocal) => {
+    const saveAction = async () => {
+      const payload = mapToBackend(certLocal)
+      let savedData;
+
+      if (certLocal.id && typeof certLocal.id !== 'number') {
+         // Crear (ID temporal)
+         savedData = await certificateService.create(payload)
+      } else {
+         // Actualizar (ID real)
+         savedData = await certificateService.update(certLocal.id, payload)
+      }
+
+      setCertificates(prev => prev.map(c => 
+        c.id === certLocal.id ? mapToFrontend(savedData) : c
+      ))
+      return savedData
+    }
+
+    toast.promise(saveAction(), {
+      loading: 'Guardando...',
+      success: '¡Certificado guardado!',
+      error: 'Error al guardar',
+    })
+  }
+
+  // 3. Borrar
+  const openDeleteModal = (id) => {
+    setItemToDelete(id)
+    setIsDeleteModalOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return
+    setIsDeleteModalOpen(false)
+
+    const id = itemToDelete
+    const isTemp = typeof id !== 'number'
+
+    const deleteAction = async () => {
+      if (!isTemp) await certificateService.delete(id)
+      setCertificates(prev => prev.filter(c => c.id !== id))
+    }
+
+    if (isTemp) {
+      deleteAction()
+      toast.success("Borrador eliminado")
+    } else {
+      toast.promise(deleteAction(), {
+        loading: 'Eliminando...',
+        success: 'Certificado eliminado',
+        error: 'No se pudo eliminar',
+      })
+    }
+    setItemToDelete(null)
+  }
+
+  // 4. Gestión de estado local
   const addCertificate = () => {
     const newCertificate = {
-      id: Date.now(),
+      id: `temp-${Date.now()}`,
       name: "",
       issuer: "",
       date: "",
@@ -16,22 +122,16 @@ const CertificatesSection = ({ data, onUpdate }) => {
       url: "",
       description: "",
     }
-    const updatedCertificates = [...certificates, newCertificate]
-    setCertificates(updatedCertificates)
-    onUpdate(updatedCertificates)
+    setCertificates([newCertificate, ...certificates])
   }
 
   const updateCertificate = (id, field, value) => {
-    const updatedCertificates = certificates.map((cert) => (cert.id === id ? { ...cert, [field]: value } : cert))
-    setCertificates(updatedCertificates)
-    onUpdate(updatedCertificates)
+    setCertificates(prev => prev.map((cert) => 
+      (cert.id === id ? { ...cert, [field]: value } : cert)
+    ))
   }
 
-  const deleteCertificate = (id) => {
-    const updatedCertificates = certificates.filter((cert) => cert.id !== id)
-    setCertificates(updatedCertificates)
-    onUpdate(updatedCertificates)
-  }
+  if (loading) return <div className="p-6 text-center text-gray-500">Cargando certificados...</div>
 
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6">
@@ -49,6 +149,14 @@ const CertificatesSection = ({ data, onUpdate }) => {
         </button>
       </div>
 
+      <ConfirmModal 
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="¿Eliminar certificado?"
+        message="Esta acción eliminará el certificado permanentemente."
+      />
+
       {certificates.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
           <i className="fas fa-certificate text-4xl mb-4"></i>
@@ -58,10 +166,14 @@ const CertificatesSection = ({ data, onUpdate }) => {
       ) : (
         <div className="space-y-6">
           {certificates.map((cert, index) => (
-            <div key={cert.id} className="border border-gray-200 rounded-lg p-6">
+            <div key={cert.id} className="border border-gray-200 rounded-lg p-6 relative">
               <div className="flex justify-between items-start mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Certificado {index + 1}</h3>
-                <button onClick={() => deleteCertificate(cert.id)} className="text-red-600 hover:text-red-700 p-2">
+                <h3 className="text-lg font-medium text-gray-900">Certificado {certificates.length - index}</h3>
+                <button 
+                  onClick={() => openDeleteModal(cert.id)} 
+                  className="text-red-600 hover:text-red-700 p-2 transition-colors"
+                  title="Eliminar"
+                >
                   <i className="fas fa-trash"></i>
                 </button>
               </div>
@@ -116,7 +228,7 @@ const CertificatesSection = ({ data, onUpdate }) => {
                     value={cert.credentialId}
                     onChange={(e) => updateCertificate(cert.id, "credentialId", e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    placeholder="Número o código de verificación"
+                    placeholder="Número o código"
                   />
                 </div>
 
@@ -138,8 +250,19 @@ const CertificatesSection = ({ data, onUpdate }) => {
                     onChange={(e) => updateCertificate(cert.id, "description", e.target.value)}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    placeholder="Habilidades adquiridas, relevancia para tu carrera..."
+                    placeholder="Habilidades adquiridas..."
                   />
+                </div>
+                
+                {/* Botón Guardar */}
+                <div className="md:col-span-2 flex justify-end border-t border-gray-100 pt-4 mt-2">
+                    <button 
+                        onClick={() => handleSave(cert)}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-md transition-all shadow-sm hover:shadow-md text-sm font-medium flex items-center gap-2"
+                    >
+                        <i className="fas fa-save"></i>
+                        Guardar cambios
+                    </button>
                 </div>
               </div>
             </div>

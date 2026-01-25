@@ -27,6 +27,7 @@ import accounts.views as views
 router = DefaultRouter()
 router.register(r'experience', views.WorkExperienceViewSet, basename='work-experience')
 router.register(r'education', views.EducationViewSet, basename='education')
+router.register(r'certificates', views.CertificateViewSet, basename='certificates')
 
 urlpatterns = [
     path('api/admin/', admin.site.urls),
