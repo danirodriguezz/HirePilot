@@ -5,6 +5,7 @@ import { projectService } from "../../services/projectService"
 import { skillService } from "../../services/skillService"
 import toast from "react-hot-toast"
 import ConfirmModal from "../ui/ConfirmModal"
+import CustomDatePicker from "../ui/CustomDatePicker"
 
 // --- MAPPERS ---
 const mapToBackend = (proj) => ({
@@ -17,7 +18,7 @@ const mapToBackend = (proj) => ({
   resource_url: proj.resource,
   start_date: proj.startDate ? `${proj.startDate}-01` : null,
   end_date: proj.endDate ? `${proj.endDate}-01` : null,
-  skills: proj.selectedSkills || [] // Array de IDs
+  skills: proj.selectedSkills || [] 
 })
 
 const mapToFrontend = (apiData) => ({
@@ -31,12 +32,12 @@ const mapToFrontend = (apiData) => ({
   resource: apiData.resource_url || "",
   startDate: apiData.start_date ? apiData.start_date.substring(0, 7) : "",
   endDate: apiData.end_date ? apiData.end_date.substring(0, 7) : "",
-  selectedSkills: apiData.skills || [] // Array de IDs
+  selectedSkills: apiData.skills || [] 
 })
 
 const ProjectsSection = () => {
   const [projects, setProjects] = useState([])
-  const [availableSkills, setAvailableSkills] = useState([]) // Para el selector
+  const [availableSkills, setAvailableSkills] = useState([]) 
   const [loading, setLoading] = useState(true)
 
   // Estados Modal Borrado
@@ -60,7 +61,7 @@ const ProjectsSection = () => {
           skillService.getAll()
         ])
         setProjects(projectsData.map(mapToFrontend))
-        setAvailableSkills(skillsData) // Guardamos skills para el selector
+        setAvailableSkills(skillsData) 
       } catch (err) {
         console.error(err)
         toast.error("Error cargando datos")
@@ -252,24 +253,25 @@ const ProjectsSection = () => {
                   />
                 </div>
 
-                {/* Fechas */}
-                <div className="flex gap-2">
+                {/* --- 2. FECHAS CON CUSTOM DATE PICKER --- */}
+                <div className="flex gap-4">
                   <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Inicio</label>
-                    <input
-                      type="month"
+                    <CustomDatePicker 
+                      label="Inicio"
                       value={proj.startDate}
-                      onChange={(e) => handleChange(proj.id, "startDate", e.target.value)}
-                      className="w-full px-3 py-2 border rounded-md"
+                      onChange={(val) => handleChange(proj.id, "startDate", val)}
+                      showMonthYearPicker={true}
+                      placeholder="Fecha inicio"
                     />
                   </div>
                   <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fin</label>
-                    <input
-                      type="month"
+                    <CustomDatePicker 
+                      label="Fin"
                       value={proj.endDate}
-                      onChange={(e) => handleChange(proj.id, "endDate", e.target.value)}
-                      className="w-full px-3 py-2 border rounded-md"
+                      onChange={(val) => handleChange(proj.id, "endDate", val)}
+                      showMonthYearPicker={true}
+                      placeholder="Fecha fin"
+                      minDate={proj.startDate ? new Date(proj.startDate) : null}
                     />
                   </div>
                 </div>

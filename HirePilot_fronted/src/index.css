@@ -20,3 +20,39 @@ html {
     transform: translateY(0);
   }
 }
+
+/* Custom react-datepicker overrides for Tailwind/Emerald theme */
+
+.react-datepicker {
+  @apply !font-sans !border-gray-200 !shadow-lg !rounded-lg;
+}
+
+.react-datepicker__header {
+  @apply !bg-gray-50 !border-b !border-gray-200;
+}
+
+.react-datepicker__current-month, 
+.react-datepicker-time__header, 
+.react-datepicker-year-header {
+  @apply !text-gray-800 !font-semibold;
+}
+
+.react-datepicker__day--selected, 
+.react-datepicker__day--keyboard-selected, 
+.react-datepicker__month-text--selected, 
+.react-datepicker__month-text--keyboard-selected {
+  @apply !bg-emerald-600 !text-white hover:!bg-emerald-700;
+}
+
+.react-datepicker__day:hover, 
+.react-datepicker__month-text:hover {
+  @apply !bg-emerald-100;
+}
+
+.react-datepicker__navigation-icon::before {
+  @apply !border-gray-500;
+}
+
+.react-datepicker__month-wrapper {
+  @apply !flex !justify-center;
+}

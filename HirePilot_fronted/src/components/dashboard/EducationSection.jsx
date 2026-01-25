@@ -1,11 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { educationService } from "../../services/educationService" // <--- Importamos servicio
+import { educationService } from "../../services/educationService"
 import ConfirmModal from "../ui/ConfirmModal"
+import CustomDatePicker from "../ui/CustomDatePicker" // <--- Importado OK
 import toast from "react-hot-toast"
 
-// --- MAPPERS (Conectan Front con Back) ---
+// --- MAPPERS ---
 const mapToBackend = (edu) => ({
   institution: edu.institution,
   degree: edu.degree,
@@ -61,10 +62,8 @@ const EducationSection = () => {
       let savedData;
 
       if (eduLocal.id && typeof eduLocal.id !== 'number') {
-         // Crear (ID es string temporal)
          savedData = await educationService.create(payload)
       } else {
-         // Actualizar (ID es número real)
          savedData = await educationService.update(eduLocal.id, payload)
       }
 
@@ -119,7 +118,6 @@ const EducationSection = () => {
       institution: "",
       degree: "",
       field: "",
-      location: "", // Nota: No se guardará en backend si no actualizamos el modelo
       startDate: "",
       endDate: "",
       current: false,
@@ -216,53 +214,53 @@ const EducationSection = () => {
                   />
                 </div>
                 
-                {/* Nota: He ocultado ubicación porque no está en el backend. 
-                    Si lo necesitas, descomenta y añade al backend */}
-                {/* <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Ubicación</label>
-                  <input
-                    type="text"
-                    value={edu.location}
-                    onChange={(e) => handleChange(edu.id, "location", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  />
-                </div> */}
-
+                {/* --- SECCIÓN FECHAS CORREGIDA --- */}
+                
+                {/* 1. Fecha de Inicio */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Inicio</label>
-                  <input
-                    type="month"
-                    value={edu.startDate}
-                    onChange={(e) => handleChange(edu.id, "startDate", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
+                  <CustomDatePicker 
+                      label="Fecha de inicio"
+                      value={edu.startDate}
+                      onChange={(val) => handleChange(edu.id, "startDate", val)}
+                      showMonthYearPicker={true} 
+                      placeholder="Seleccionar inicio"
+                    />
                 </div>
 
-                <div>
-                  <div className="flex items-center gap-4 mb-2 mt-8">
-                    <label className="flex items-center cursor-pointer">
+                {/* 2. Fecha de Fin (Si no estudia actualmente) */}
+                {!edu.current ? (
+                  <div>
+                    <CustomDatePicker 
+                        label="Fecha de fin"
+                        value={edu.endDate}
+                        onChange={(val) => handleChange(edu.id, "endDate", val)}
+                        showMonthYearPicker={true}
+                        placeholder="Seleccionar fin"
+                        minDate={edu.startDate ? new Date(edu.startDate) : null}
+                      />
+                  </div>
+                ) : (
+                  // Espacio vacío para mantener el grid alineado si solo hay fecha de inicio
+                  <div className="hidden md:block"></div>
+                )}
+
+                {/* 3. Checkbox "Estudiando actualmente" */}
+                <div className="md:col-span-2 flex items-center mt-2">
+                    <label className="flex items-center cursor-pointer select-none">
                       <input
                         type="checkbox"
                         checked={edu.current}
-                        onChange={(e) => handleChange(edu.id, "current", e.target.checked)}
+                        onChange={(e) => {
+                            handleChange(edu.id, "current", e.target.checked);
+                            if (e.target.checked) handleChange(edu.id, "endDate", ""); // Limpiar fecha fin
+                        }}
                         className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
                       />
                       <span className="ml-2 text-sm text-gray-700">Estudiando actualmente</span>
                     </label>
-                  </div>
-
-                  {!edu.current && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Fin</label>
-                      <input
-                        type="month"
-                        value={edu.endDate}
-                        onChange={(e) => handleChange(edu.id, "endDate", e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      />
-                    </div>
-                  )}
                 </div>
+
+                {/* --- FIN SECCIÓN FECHAS --- */}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Nota media (Opcional)</label>

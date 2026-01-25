@@ -3,16 +3,17 @@
 import { useState, useEffect } from "react"
 import { certificateService } from "../../services/certificateService"
 import ConfirmModal from "../ui/ConfirmModal"
+import CustomDatePicker from "../ui/CustomDatePicker" // <--- IMPORTACIÓN AÑADIDA
 import toast from "react-hot-toast"
 
 // --- MAPPERS (Frontend <-> Backend) ---
 const mapToBackend = (cert) => ({
   name: cert.name,
-  issuing_organization: cert.issuer, // Front: issuer -> Back: issuing_organization
+  issuing_organization: cert.issuer, 
   issue_date: cert.date ? `${cert.date}-01` : null,
   expiration_date: cert.expiryDate ? `${cert.expiryDate}-01` : null,
   credential_id: cert.credentialId,
-  credential_url: cert.url,          // Front: url -> Back: credential_url
+  credential_url: cert.url,          
   description: cert.description,
 })
 
@@ -201,23 +202,26 @@ const CertificatesSection = () => {
                   />
                 </div>
 
+                {/* --- CUSTOM DATE PICKER: FECHA EMISIÓN --- */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de emisión</label>
-                  <input
-                    type="month"
+                  <CustomDatePicker
+                    label="Fecha de emisión"
                     value={cert.date}
-                    onChange={(e) => updateCertificate(cert.id, "date", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    onChange={(val) => updateCertificate(cert.id, "date", val)}
+                    showMonthYearPicker={true}
+                    placeholder="Seleccionar fecha"
                   />
                 </div>
 
+                {/* --- CUSTOM DATE PICKER: FECHA EXPIRACIÓN --- */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de expiración (opcional)</label>
-                  <input
-                    type="month"
+                  <CustomDatePicker
+                    label="Fecha de expiración (opcional)"
                     value={cert.expiryDate}
-                    onChange={(e) => updateCertificate(cert.id, "expiryDate", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    onChange={(val) => updateCertificate(cert.id, "expiryDate", val)}
+                    showMonthYearPicker={true}
+                    placeholder="Seleccionar fecha"
+                    minDate={cert.date ? new Date(cert.date) : null}
                   />
                 </div>
 

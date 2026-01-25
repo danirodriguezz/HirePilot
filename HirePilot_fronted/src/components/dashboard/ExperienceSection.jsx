@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react"
 import { experienceService } from "../../services/experienceService"
 import ConfirmModal from "../ui/ConfirmModal"
+import CustomDatePicker from "../ui/CustomDatePicker" // Asegúrate de que la ruta sea correcta
 import toast from "react-hot-toast"
 
-// --- MAPPERS (Sin cambios, funcionan bien) ---
+// --- MAPPERS ---
 const mapToBackend = (exp) => ({
   company: exp.company,
   role: exp.position,
@@ -53,29 +54,24 @@ const ExperienceSection = () => {
     }
   }
 
-  // --- LÓGICA DE GUARDADO (Refactorizada) ---
+  // --- LÓGICA DE GUARDADO ---
   const handleSave = async (experienceLocal) => {
-    // Encapsulamos la lógica en una función async pura
     const saveAction = async () => {
       const payload = mapToBackend(experienceLocal)
       let savedData;
 
       if (experienceLocal.id && typeof experienceLocal.id !== 'number') {
-         // Crear (ID temporal es string)
          savedData = await experienceService.create(payload)
       } else {
-         // Actualizar (ID real es número)
          savedData = await experienceService.update(experienceLocal.id, payload)
       }
 
-      // Actualizamos el estado local con la respuesta real del servidor
       setExperiences(prev => prev.map(e => 
         e.id === experienceLocal.id ? mapToFrontend(savedData) : e
       ))
       return savedData
     }
 
-    // Pasamos la ejecución de la función a toast.promise
     toast.promise(saveAction(), {
       loading: 'Guardando cambios...',
       success: '¡Experiencia guardada!',
@@ -91,51 +87,44 @@ const ExperienceSection = () => {
 
   const confirmDelete = async () => {
     if (!itemToDelete) return
-    setIsDeleteModalOpen(false) // Cerrar modal visualmente rápido
+    setIsDeleteModalOpen(false)
 
     const id = itemToDelete
     const isTemp = typeof id !== 'number'
 
-    // Definimos la acción de borrado
     const deleteAction = async () => {
       if (!isTemp) {
         await experienceService.delete(id)
       }
-      // Actualizamos UI
       setExperiences(prev => prev.filter(e => e.id !== id))
     }
 
     if (isTemp) {
-      // Si es temporal, no llamamos a API, solo borramos del estado
       deleteAction()
       toast.success("Borrador eliminado")
     } else {
-      // Si es real, usamos toast.promise
       toast.promise(deleteAction(), {
         loading: 'Eliminando...',
         success: 'Experiencia eliminada',
         error: 'No se pudo eliminar',
       })
     }
-    
     setItemToDelete(null)
   }
 
-  // --- MANEJADORES DE ESTADO LOCAL (Unificados y Limpios) ---
-  
+  // --- MANEJADORES DE ESTADO LOCAL ---
   const handleAddExperience = () => {
     const newExperience = {
       id: `temp-${Date.now()}`,
       company: "",
       position: "",
       location: "",
-      description: "", // Corregido: Ya no está duplicado
+      description: "",
       startDate: "",
       endDate: "",
       current: false,
       achievements: [""],
     }
-    // Añadimos al principio de la lista para mejor UX
     setExperiences([newExperience, ...experiences])
   }
 
@@ -145,7 +134,6 @@ const ExperienceSection = () => {
     ))
   }
 
-  // Gestión de Logros (Achievements)
   const handleAchievementChange = (expId, index, value) => {
     setExperiences(prev => prev.map(exp => {
       if (exp.id !== expId) return exp
@@ -249,39 +237,55 @@ const ExperienceSection = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 outline-none"
                     />
                   </div>
+                  
+                  {/* Celda vacía para mantener alineación en desktop, opcional */}
+                  <div className="hidden md:block"></div>
 
+                  {/* --- INTEGRACIÓN DE CUSTOM DATE PICKER --- */}
+                  
+                  {/* Fecha de Inicio */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Inicio</label>
-                    <input
-                      type="month"
+                    <CustomDatePicker 
+                      label="Fecha de inicio"
                       value={experience.startDate}
-                      onChange={(e) => handleChangeField(experience.id, "startDate", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 outline-none"
+                      onChange={(val) => handleChangeField(experience.id, "startDate", val)}
+                      showMonthYearPicker={true} // True para ver solo mes y año
+                      placeholder="Seleccionar inicio"
                     />
                   </div>
 
-                  <div className="md:col-span-2 flex items-center gap-4">
-                    <label className="flex items-center cursor-pointer">
+                  {/* Fecha de Fin (Renderizado Condicional) */}
+                  {!experience.current ? (
+                    <div>
+                      <CustomDatePicker 
+                        label="Fecha de fin"
+                        value={experience.endDate}
+                        onChange={(val) => handleChangeField(experience.id, "endDate", val)}
+                        showMonthYearPicker={true}
+                        placeholder="Seleccionar fin"
+                        minDate={experience.startDate ? new Date(experience.startDate) : null}
+                      />
+                    </div>
+                  ) : (
+                    // Espacio vacío visual si está trabajando actualmente
+                    <div className="hidden md:block"></div>
+                  )}
+
+                  {/* Checkbox Trabajo Actual */}
+                  <div className="md:col-span-2 flex items-center mt-2">
+                    <label className="flex items-center cursor-pointer select-none">
                       <input
                         type="checkbox"
                         checked={experience.current}
-                        onChange={(e) => handleChangeField(experience.id, "current", e.target.checked)}
+                        onChange={(e) => {
+                            // Si se marca como actual, limpiamos la fecha de fin
+                            handleChangeField(experience.id, "current", e.target.checked);
+                            if (e.target.checked) handleChangeField(experience.id, "endDate", "");
+                        }}
                         className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
                       />
                       <span className="ml-2 text-sm text-gray-700">Trabajo actual</span>
                     </label>
-
-                    {!experience.current && (
-                      <div className="flex items-center gap-2">
-                        <label className="text-sm text-gray-700">Fin:</label>
-                        <input
-                          type="month"
-                          value={experience.endDate}
-                          onChange={(e) => handleChangeField(experience.id, "endDate", e.target.value)}
-                          className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 outline-none"
-                        />
-                      </div>
-                    )}
                   </div>
                 </div>
 
