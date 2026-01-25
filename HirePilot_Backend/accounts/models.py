@@ -227,6 +227,52 @@ class Skill(models.Model):
     def __str__(self):
         return f"{self.name} ({self.get_level_display()})"
 
+class Project(models.Model):
+    # Categorías genéricas aplicables a cualquier industria
+    class ProjectCategory(models.TextChoices):
+        PROFESSIONAL = 'PROFESSIONAL', 'Profesional / Trabajo'
+        FREELANCE = 'FREELANCE', 'Freelance / Cliente'
+        ACADEMIC = 'ACADEMIC', 'Académico / Tesis'
+        PERSONAL = 'PERSONAL', 'Proyecto Personal'
+        VOLUNTEER = 'VOLUNTEER', 'Voluntariado'
+
+    user = models.ForeignKey(
+        CustomUser, 
+        on_delete=models.CASCADE, 
+        related_name='projects'
+    )
+    title = models.CharField(max_length=255) # Ej: "Campaña de Verano 2024", "Rebranding Marca X"
+    
+    # Nuevo: Tu rol específico en este proyecto
+    role = models.CharField(max_length=255, blank=True, help_text="Ej: Project Manager, Lead Designer, Content Creator")
+    
+    # Nuevo: Cliente o Entidad (Opcional)
+    organization = models.CharField(max_length=255, blank=True, help_text="Cliente, Empresa o Institución")
+    
+    category = models.CharField(
+        max_length=20, 
+        choices=ProjectCategory.choices, 
+        default=ProjectCategory.PROFESSIONAL
+    )
+    
+    description = models.TextField() # Resultados, KPIs, desafíos superados
+    
+    # Enlaces flexibles
+    project_url = models.URLField(blank=True, null=True, help_text="Enlace principal (Web, Portfolio, Noticia)")
+    resource_url = models.URLField(blank=True, null=True, help_text="Enlace secundario (PDF, Video, Drive, GitHub)")
+    
+    # Relación con Skills (Herramientas: Photoshop, Google Ads, Excel, Python...)
+    skills = models.ManyToManyField('Skill', related_name='projects', blank=True)
+    
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True) # Si es null, se asume "En curso" o "Indefinido"
+    
+    class Meta:
+        ordering = ['-end_date', '-start_date']
+
+    def __str__(self):
+        return f"{self.title} ({self.role})"
+
 class JobPosting(models.Model):
     user = models.ForeignKey(
         CustomUser, 

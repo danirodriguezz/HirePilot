@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from .models import CustomUser, Education, UserProfile, Certificate, Language, Skill
+from .models import CustomUser, Education, UserProfile, Certificate, Language, Skill, Project
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.exceptions import AuthenticationFailed
 from .models import WorkExperience, WorkAchievement
@@ -244,3 +244,24 @@ class SkillSerializer(serializers.ModelSerializer):
         model = Skill
         fields = ['id', 'name', 'skill_type', 'level']
         read_only_fields = ['id']
+
+class ProjectSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Project
+        fields = [
+            'id', 
+            'title', 
+            'role',           # <--- Nuevo
+            'organization',   # <--- Nuevo
+            'category', 
+            'description', 
+            'project_url', 
+            'resource_url',   # <--- Renombrado
+            'skills',         # Recibe lista de IDs [1, 5, 8]
+            'start_date', 
+            'end_date'
+        ]
+        read_only_fields = ['id']
+        extra_kwargs = {
+            'skills': {'required': False}
+        }

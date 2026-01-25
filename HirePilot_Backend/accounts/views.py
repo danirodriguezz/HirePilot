@@ -8,8 +8,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .models import UserProfile, WorkExperience, WorkAchievement, Education, Certificate, Language, Skill
-from .serializers import UserRegistrationSerializer, CustomTokenObtainPairSerializer, UserDetailSerializer, WorkExperienceSerializer, EducationSerializer, CertificateSerializer, LanguageSerializer, SkillSerializer
+from .models import UserProfile, WorkExperience, WorkAchievement, Education, Certificate, Language, Skill, Project
+from .serializers import UserRegistrationSerializer, CustomTokenObtainPairSerializer, UserDetailSerializer, WorkExperienceSerializer, EducationSerializer, CertificateSerializer, LanguageSerializer, SkillSerializer, ProjectSerializer
 
 
 User = get_user_model()
@@ -172,6 +172,20 @@ class SkillViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return Skill.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+# Importar: from .models import Project
+# Importar: from .serializers import ProjectSerializer
+
+class ProjectViewSet(viewsets.ModelViewSet):
+    serializer_class = ProjectSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Optimización: 'prefetch_related' acelera la carga de la relación ManyToMany
+        return Project.objects.filter(user=self.request.user).prefetch_related('skills').order_by('-end_date')
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

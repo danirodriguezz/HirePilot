@@ -30,6 +30,7 @@ router.register(r'education', views.EducationViewSet, basename='education')
 router.register(r'certificates', views.CertificateViewSet, basename='certificates')
 router.register(r'languages', views.LanguageViewSet, basename='languages')
 router.register(r'skills', views.SkillViewSet, basename='skills')
+router.register(r'projects', views.ProjectViewSet, basename='projects')
 
 urlpatterns = [
     path('api/admin/', admin.site.urls),
