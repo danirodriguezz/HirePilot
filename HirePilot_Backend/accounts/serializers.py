@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from .models import CustomUser, Education, UserProfile, Certificate, Language
+from .models import CustomUser, Education, UserProfile, Certificate, Language, Skill
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.exceptions import AuthenticationFailed
 from .models import WorkExperience, WorkAchievement
@@ -235,4 +235,12 @@ class LanguageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Language
         fields = ['id', 'language', 'level', 'certificate']
+        read_only_fields = ['id']
+
+# Importa el modelo Skill si es necesario: from .models import Skill
+
+class SkillSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Skill
+        fields = ['id', 'name', 'skill_type', 'level']
         read_only_fields = ['id']

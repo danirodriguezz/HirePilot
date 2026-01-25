@@ -8,8 +8,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .models import UserProfile, WorkExperience, WorkAchievement, Education, Certificate, Language
-from .serializers import UserRegistrationSerializer, CustomTokenObtainPairSerializer, UserDetailSerializer, WorkExperienceSerializer, EducationSerializer, CertificateSerializer, LanguageSerializer
+from .models import UserProfile, WorkExperience, WorkAchievement, Education, Certificate, Language, Skill
+from .serializers import UserRegistrationSerializer, CustomTokenObtainPairSerializer, UserDetailSerializer, WorkExperienceSerializer, EducationSerializer, CertificateSerializer, LanguageSerializer, SkillSerializer
 
 
 User = get_user_model()
@@ -164,4 +164,14 @@ class LanguageViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         # Asigna el usuario automáticamente al crear
+        serializer.save(user=self.request.user)
+
+class SkillViewSet(viewsets.ModelViewSet):
+    serializer_class = SkillSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Skill.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
         serializer.save(user=self.request.user)

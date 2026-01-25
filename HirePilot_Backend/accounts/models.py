@@ -192,16 +192,40 @@ class Language(models.Model):
         return f"{self.language} ({self.level})"
 
 class Skill(models.Model):
+    # Opciones para el Tipo de Habilidad
+    class SkillType(models.TextChoices):
+        TECHNICAL = 'TECHNICAL', 'Technical' # Habilidades duras (Python, SQL)
+        SOFT = 'SOFT', 'Soft'           # Habilidades blandas (Liderazgo, Comunicación)
+
+    # Opciones para el Nivel
+    class SkillLevel(models.TextChoices):
+        BEGINNER = 'BEGINNER', 'Principiante'
+        INTERMEDIATE = 'INTERMEDIATE', 'Intermedio'
+        ADVANCED = 'ADVANCED', 'Avanzado'
+        EXPERT = 'EXPERT', 'Experto'
+
     user = models.ForeignKey(
         CustomUser, 
         on_delete=models.CASCADE, 
         related_name='skills'
     )
-    name = models.CharField(max_length=255)
-    category = models.CharField(max_length=255) # Ej: Frontend, Soft Skills, Tools
+    name = models.CharField(max_length=100)
+    skill_type = models.CharField(
+        max_length=20, 
+        choices=SkillType.choices, 
+        default=SkillType.TECHNICAL
+    )
+    level = models.CharField(
+        max_length=20, 
+        choices=SkillLevel.choices, 
+        default=SkillLevel.INTERMEDIATE
+    )
+
+    class Meta:
+        ordering = ['skill_type', '-level', 'name'] # Ordenar por tipo, luego nivel, luego nombre
 
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.get_level_display()})"
 
 class JobPosting(models.Model):
     user = models.ForeignKey(
