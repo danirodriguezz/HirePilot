@@ -11,7 +11,12 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 from datetime import timedelta
+from dotenv import load_dotenv
+
+# Cargar variables de entorno desde el .env
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,10 +26,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-we&&0%t7=1dn4j97jctbnn%xllhc0ry3td@9x-fggl5p9)ezaw'
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False if os.getenv('DEBUG') == 'False' else True
 
 ALLOWED_HOSTS = []
 
@@ -43,7 +48,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
-    'accounts'
+    'accounts',
+    'cv_generator'
 ]
 
 REST_FRAMEWORK = {
@@ -58,7 +64,7 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': True,
@@ -164,3 +170,5 @@ PASSWORD_RESET_TIMEOUT = 86400
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # Cuando pases a producción, cambiarás esto por SMTP (Gmail, SendGrid, AWS SES)
 DEFAULT_FROM_EMAIL = 'noreply@hirepilot.com'
+
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
