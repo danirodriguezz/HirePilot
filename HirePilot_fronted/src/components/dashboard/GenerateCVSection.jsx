@@ -1,8 +1,10 @@
 "use client"
 
 import { useState } from "react"
-
-const GenerateCVSection = ({ userData, onGenerate, isGenerating }) => {
+import { PDFDownloadLink } from "@react-pdf/renderer"
+import { CVDocument } from "../pdf/CVDocument"
+ 
+const GenerateCVSection = ({ userData, onGenerate, isGenerating, generatedCV }) => {
   const [selectedTemplate, setSelectedTemplate] = useState("modern")
   const [selectedLanguage, setSelectedLanguage] = useState("es")
 
@@ -34,12 +36,9 @@ const GenerateCVSection = ({ userData, onGenerate, isGenerating }) => {
   ]
 
   const handleGenerate = () => {
-    const generationData = {
-      ...userData,
-      template: selectedTemplate,
-      language: selectedLanguage,
-    }
-    onGenerate(generationData.jobDescription)
+    // Solo pasamos la descripción, el backend ya tiene el usuario. 
+    // Si tu lógica requiere pasar template/idioma al backend, añádelos aquí.
+    onGenerate(userData.jobDescription)
   }
 
   const getCompletionPercentage = () => {
@@ -51,14 +50,14 @@ const GenerateCVSection = ({ userData, onGenerate, isGenerating }) => {
     if (userData.education.length > 0) completed++
     if (userData.skills.technical.length > 0 || userData.skills.soft.length > 0) completed++
     if (userData.languages.length > 0) completed++
-    if (userData.jobDescription.trim()) completed++
-    if (userData.profile.summary.trim()) completed++
+    if (userData.jobDescription?.trim()) completed++ 
+    if (userData.profile.summary?.trim()) completed++
 
     return Math.round((completed / total) * 100)
   }
 
   const completionPercentage = getCompletionPercentage()
-  const canGenerate = completionPercentage >= 60 && userData.jobDescription.trim()
+  const canGenerate = completionPercentage >= 40 && userData.jobDescription?.trim()
 
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6">
@@ -155,7 +154,7 @@ const GenerateCVSection = ({ userData, onGenerate, isGenerating }) => {
             <div>
               <h4 className="font-medium text-yellow-800">Requisitos para generar CV</h4>
               <ul className="text-sm text-yellow-700 mt-1 space-y-1">
-                {!userData.jobDescription.trim() && <li>• Añade la descripción del puesto de trabajo</li>}
+                {!userData.jobDescription?.trim() && <li>• Añade la descripción del puesto de trabajo</li>}
                 {completionPercentage < 60 && <li>• Completa al menos el 60% de tu perfil</li>}
               </ul>
             </div>
@@ -163,35 +162,74 @@ const GenerateCVSection = ({ userData, onGenerate, isGenerating }) => {
         </div>
       )}
 
-      {/* Generate Button */}
-      <div className="flex justify-center">
-        <button
-          onClick={handleGenerate}
-          disabled={!canGenerate || isGenerating}
-          className={`px-8 py-4 rounded-lg font-semibold text-lg transition-all flex items-center gap-3 ${
-            canGenerate && !isGenerating
-              ? "bg-emerald-600 hover:bg-emerald-700 text-white hover:scale-105"
-              : "bg-gray-300 text-gray-500 cursor-not-allowed"
-          }`}
-        >
-          {isGenerating ? (
-            <>
-              <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              Generando CV personalizado...
-            </>
-          ) : (
-            <>
-              <i className="fas fa-magic text-xl"></i>
-              Generar CV Personalizado
-            </>
-          )}
-        </button>
+      {/* 3. BOTÓN DE ACCIÓN (GENERAR O DESCARGAR) */}
+      <div className="flex flex-col items-center gap-4 justify-center">
+        
+        {/* CASO A: YA TENEMOS EL CV GENERADO -> MOSTRAR DESCARGA */}
+        {generatedCV ? (
+          <div className="w-full animate-fadeIn">
+            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3 text-green-800">
+               <i className="fas fa-check-circle text-xl"></i>
+               <div>
+                 <p className="font-bold">¡CV Generado con éxito!</p>
+                 <p className="text-sm">Adaptado para: {generatedCV.job_title_target}</p>
+               </div>
+            </div>
+
+            <div className="flex gap-4 justify-center">
+                <PDFDownloadLink
+                    document={<CVDocument data={generatedCV} />}
+                    fileName={`CV_HirePilot_${generatedCV.job_title_target?.replace(/[^a-z0-9]/gi, '_') || 'Optimized'}.pdf`}
+                    className="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-lg shadow-lg hover:scale-105 transition-all flex items-center gap-2"
+                >
+                    {({ blob, url, loading, error }) =>
+                        loading ? 'Preparando PDF...' : (
+                            <>
+                                <i className="fas fa-download"></i>
+                                Descargar PDF
+                            </>
+                        )
+                    }
+                </PDFDownloadLink>
+
+                <button 
+                  onClick={handleGenerate}
+                  className="px-6 py-4 bg-white border-2 border-emerald-600 text-emerald-600 rounded-lg font-semibold hover:bg-emerald-50 transition-colors"
+                >
+                  Regenerar
+                </button>
+            </div>
+          </div>
+        ) : (
+          /* CASO B: AÚN NO GENERADO -> MOSTRAR BOTÓN DE GENERAR */
+          <button
+            onClick={handleGenerate}
+            disabled={!canGenerate || isGenerating}
+            className={`px-8 py-4 rounded-lg font-semibold text-lg transition-all flex items-center gap-3 ${
+              canGenerate && !isGenerating
+                ? "bg-emerald-600 hover:bg-emerald-700 text-white hover:scale-105 shadow-md"
+                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+            }`}
+          >
+            {isGenerating ? (
+              <>
+                <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Generando CV con IA...
+              </>
+            ) : (
+              <>
+                <i className="fas fa-magic text-xl"></i>
+                Generar CV Personalizado
+              </>
+            )}
+          </button>
+        )}
       </div>
 
-      {canGenerate && !isGenerating && (
+      {canGenerate && !isGenerating && !generatedCV && (
         <div className="mt-4 text-center">
           <p className="text-sm text-gray-600">El proceso tomará aproximadamente 30-60 segundos</p>
-          <p className="text-xs text-gray-500 mt-1">Recibirás tu CV optimizado por email una vez completado</p>
+          <p className="text-xs text-gray-500 mt-1">La IA analizará la oferta y adaptará tu experiencia</p>
         </div>
       )}
     </div>

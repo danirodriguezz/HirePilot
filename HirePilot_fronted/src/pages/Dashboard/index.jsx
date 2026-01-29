@@ -14,6 +14,7 @@ import SkillsSection from "../../components/dashboard/SkillsSection"
 import ProjectsSection from "../../components/dashboard/ProjectsSection"
 import JobDescriptionSection from "../../components/dashboard/JobDescriptionSection"
 import GenerateCVSection from "../../components/dashboard/GenerateCVSection"
+import { generateCVApi } from "../../services/cvService"
 
 const Dashboard = () => {
   const [activeSection, setActiveSection] = useState("profile")
@@ -22,6 +23,9 @@ const Dashboard = () => {
   const [isInitialLoading, setIsInitialLoading] = useState(true)
   const profileMenuRef = useRef(null)
   const navigate = useNavigate()
+
+  const [generatedCV, setGeneratedCV] = useState(null)
+
   const [userData, setUserData] = useState({
     profile: {
       firstName: "",
@@ -71,10 +75,9 @@ const Dashboard = () => {
           });
       } catch (err) {
         console.error("Error obteniendo usuario:", err)
-        // Opcional: Redirigir al login si falla
+
         if(err.response?.status === 401) navigate('/login');
       } finally {
-        // 2. IMPORTANTE: Desactivar la carga pase lo que pase
         setIsInitialLoading(false)
       }
     }
@@ -124,25 +127,21 @@ const Dashboard = () => {
     return (first + last).toUpperCase()
   }
 
+// MODIFICADO: Lógica real para conectar con el Backend
   const handleGenerateCV = async (jobDescription) => {
     setIsGenerating(true)
+    setGeneratedCV(null) 
+    
     try {
-      // Simular llamada al backend
-      const payload = {
-        ...userData,
-        jobDescription,
-        timestamp: new Date().toISOString(),
-      }
+      const response = await generateCVApi(jobDescription)
 
-      console.log("Enviando datos al backend:", payload)
+      console.log("CV Generado:", response)
 
-      // Simular tiempo de procesamiento
-      await new Promise((resolve) => setTimeout(resolve, 3000))
+      setGeneratedCV(response.structured_cv_data)
 
-      alert("¡CV generado exitosamente! Te enviaremos el resultado por email.")
     } catch (error) {
       console.error("Error generando CV:", error)
-      alert("Error al generar el CV. Por favor, inténtalo de nuevo.")
+      alert("Hubo un error al generar el CV. Por favor, revisa tu conexión o inténtalo de nuevo.")
     } finally {
       setIsGenerating(false)
     }
@@ -184,7 +183,12 @@ const Dashboard = () => {
               jobDescription={userData.jobDescription}
               onUpdate={(data) => updateUserData("jobDescription", data)}
             />
-            <GenerateCVSection userData={userData} onGenerate={handleGenerateCV} isGenerating={isGenerating} />
+            <GenerateCVSection 
+              userData={userData} 
+              onGenerate={handleGenerateCV} 
+              isGenerating={isGenerating}
+              generatedCV={generatedCV} // <--- NUEVA PROP: Pasamos el resultado
+            />
           </div>
         )
       default:
