@@ -1,38 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { educationService } from "../../services/educationService"
+import { educationService, mapToBackend, mapToFrontendEducation } from "../../services/educationService"
 import ConfirmModal from "../ui/ConfirmModal"
 import CustomDatePicker from "../ui/CustomDatePicker" // <--- Importado OK
 import toast from "react-hot-toast"
 
-// --- MAPPERS ---
-const mapToBackend = (edu) => ({
-  institution: edu.institution,
-  degree: edu.degree,
-  field_of_study: edu.field, 
-  grade: edu.gpa,            
-  description: edu.description,
-  start_date: edu.startDate ? `${edu.startDate}-01` : null,
-  end_date: edu.endDate ? `${edu.endDate}-01` : null,
-  current: edu.current,
-})
-
-const mapToFrontend = (apiData) => ({
-  id: apiData.id,
-  institution: apiData.institution,
-  degree: apiData.degree,
-  field: apiData.field_of_study || "", 
-  gpa: apiData.grade || "",          
-  description: apiData.description || "",
-  startDate: apiData.start_date ? apiData.start_date.substring(0, 7) : "",
-  endDate: apiData.end_date ? apiData.end_date.substring(0, 7) : "",
-  current: apiData.current,
-})
-
-const EducationSection = () => {
+const EducationSection = ({ data, onUpdate }) => {
   const [educationList, setEducationList] = useState([])
-  const [loading, setLoading] = useState(true)
   
   // Estados para el Modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -40,37 +15,32 @@ const EducationSection = () => {
 
   // 1. Cargar datos al iniciar
   useEffect(() => {
-    loadEducation()
-  }, [])
-
-  const loadEducation = async () => {
-    try {
-      const data = await educationService.getAll()
-      setEducationList(data.map(mapToFrontend))
-    } catch (err) {
-      console.error(err)
-      toast.error("Error cargando educación")
-    } finally {
-      setLoading(false)
-    }
-  }
+    setEducationList(data)
+  }, [data])
 
   // 2. Lógica de Guardado (Crear/Editar)
   const handleSave = async (eduLocal) => {
     const saveAction = async () => {
       const payload = mapToBackend(eduLocal)
-      let savedData;
+      let savedDataBackend;
 
       if (eduLocal.id && typeof eduLocal.id !== 'number') {
-         savedData = await educationService.create(payload)
+         savedDataBackend = await educationService.create(payload)
       } else {
-         savedData = await educationService.update(eduLocal.id, payload)
+         savedDataBackend = await educationService.update(eduLocal.id, payload)
       }
 
-      setEducationList(prev => prev.map(e => 
-        e.id === eduLocal.id ? mapToFrontend(savedData) : e
-      ))
-      return savedData
+      // 2. Convertir respuesta a Frontend
+      const savedDataFrontend = mapToFrontendEducation(savedDataBackend)
+
+      // 3. Actualizar Estado Local
+      const newList = educationList.map(e => 
+        e.id === eduLocal.id ? savedDataFrontend : e
+      )
+      setEducationList(newList)
+      // Actualizar en el padre
+      onUpdate(newList)
+      return savedDataFrontend
     }
 
     toast.promise(saveAction(), {
@@ -95,7 +65,10 @@ const EducationSection = () => {
 
     const deleteAction = async () => {
       if (!isTemp) await educationService.delete(id)
-      setEducationList(prev => prev.filter(e => e.id !== id))
+      const newList = educationList.filter(e => e.id !== id)
+      setEducationList(newList)
+      // Actualizar en el padre
+      onUpdate(newList)
     }
 
     if (isTemp) {
@@ -132,8 +105,6 @@ const EducationSection = () => {
       edu.id === id ? { ...edu, [field]: value } : edu
     ))
   }
-
-  if (loading) return <div className="p-6 text-center text-gray-500">Cargando educación...</div>
 
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6">

@@ -1,36 +1,15 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { certificateService } from "../../services/certificateService"
+import { certificateService, mapToFrontendCertificate, mapToBackendCertificate } from "../../services/certificateService"
 import ConfirmModal from "../ui/ConfirmModal"
 import CustomDatePicker from "../ui/CustomDatePicker" // <--- IMPORTACIÓN AÑADIDA
 import toast from "react-hot-toast"
+import { mapToBackend, mapToFrontend } from "../../services/experienceService"
 
-// --- MAPPERS (Frontend <-> Backend) ---
-const mapToBackend = (cert) => ({
-  name: cert.name,
-  issuing_organization: cert.issuer, 
-  issue_date: cert.date ? `${cert.date}-01` : null,
-  expiration_date: cert.expiryDate ? `${cert.expiryDate}-01` : null,
-  credential_id: cert.credentialId,
-  credential_url: cert.url,          
-  description: cert.description,
-})
 
-const mapToFrontend = (apiData) => ({
-  id: apiData.id,
-  name: apiData.name,
-  issuer: apiData.issuing_organization,
-  date: apiData.issue_date ? apiData.issue_date.substring(0, 7) : "",
-  expiryDate: apiData.expiration_date ? apiData.expiration_date.substring(0, 7) : "",
-  credentialId: apiData.credential_id || "",
-  url: apiData.credential_url || "",
-  description: apiData.description || "",
-})
-
-const CertificatesSection = () => {
-  const [certificates, setCertificates] = useState([])
-  const [loading, setLoading] = useState(true)
+const CertificatesSection = ({ data, onUpdate }) => {
+  const [certificates, setCertificates] = useState(data)
 
   // Estados del Modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -38,39 +17,31 @@ const CertificatesSection = () => {
 
   // 1. Cargar datos
   useEffect(() => {
-    loadCertificates()
-  }, [])
-
-  const loadCertificates = async () => {
-    try {
-      const data = await certificateService.getAll()
-      setCertificates(data.map(mapToFrontend))
-    } catch (err) {
-      console.error(err)
-      toast.error("Error al cargar certificados")
-    } finally {
-      setLoading(false)
-    }
-  }
+    setCertificates(data)
+  }, [data])
 
   // 2. Guardar (Crear o Editar)
   const handleSave = async (certLocal) => {
     const saveAction = async () => {
-      const payload = mapToBackend(certLocal)
-      let savedData;
+      const payload = mapToBackendCertificate(certLocal)
+      let savedDataBackend;
 
       if (certLocal.id && typeof certLocal.id !== 'number') {
          // Crear (ID temporal)
-         savedData = await certificateService.create(payload)
+         savedDataBackend = await certificateService.create(payload)
       } else {
          // Actualizar (ID real)
-         savedData = await certificateService.update(certLocal.id, payload)
+         savedDataBackend = await certificateService.update(certLocal.id, payload)
       }
 
-      setCertificates(prev => prev.map(c => 
-        c.id === certLocal.id ? mapToFrontend(savedData) : c
-      ))
-      return savedData
+      const savedDataFrontend = mapToFrontendCertificate(savedDataBackend)
+
+      const newList = certificates.map(c => 
+        c.id === certLocal.id ? savedDataFrontend : c
+      )
+      setCertificates(newList)
+      onUpdate(newList)
+      return savedDataFrontend
     }
 
     toast.promise(saveAction(), {
@@ -131,8 +102,6 @@ const CertificatesSection = () => {
       (cert.id === id ? { ...cert, [field]: value } : cert)
     ))
   }
-
-  if (loading) return <div className="p-6 text-center text-gray-500">Cargando certificados...</div>
 
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6">

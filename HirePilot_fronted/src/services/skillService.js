@@ -1,5 +1,20 @@
 import api from '../api/axiosInstance';
 
+// --- MAPPERS ---
+// Convertimos los valores del select (lowercase) a lo que espera Django (UPPERCASE)
+export const mapToBackendSkill = (skill, type) => ({
+  name: skill.name,
+  skill_type: type === "technical" ? "TECHNICAL" : "SOFT",
+  level: skill.level ? skill.level.toUpperCase() : "INTERMEDIATE" 
+})
+
+export const mapToFrontendSkill = (apiData) => ({
+  id: apiData.id,
+  name: apiData.name,
+  level: apiData.level.toLowerCase(),
+  type: apiData.skill_type 
+})
+
 export const skillService = {
   // Obtener todas
   getAll: async () => {

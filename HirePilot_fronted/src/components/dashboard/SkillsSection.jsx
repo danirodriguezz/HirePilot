@@ -1,31 +1,15 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { skillService } from "../../services/skillService"
+import { skillService, mapToFrontendSkill, mapToBackendSkill } from "../../services/skillService"
 import toast from "react-hot-toast"
 import ConfirmModal from "../ui/ConfirmModal"
 
-// --- MAPPERS ---
-// Convertimos los valores del select (lowercase) a lo que espera Django (UPPERCASE)
-const mapToBackend = (skill, type) => ({
-  name: skill.name,
-  skill_type: type === "technical" ? "TECHNICAL" : "SOFT",
-  // Si es soft skill, el nivel por defecto es intermedio (aunque no se muestre)
-  level: skill.level ? skill.level.toUpperCase() : "INTERMEDIATE" 
-})
 
-const mapToFrontend = (apiData) => ({
-  id: apiData.id,
-  name: apiData.name,
-  level: apiData.level.toLowerCase(), // Backend: BEGINNER -> Front: beginner
-  type: apiData.skill_type // TECHNICAL o SOFT
-})
-
-const SkillsSection = () => {
+const SkillsSection = ({ data, onUpdate }) => {
   // Estado separado para facilitar la gestión visual
-  const [technicalSkills, setTechnicalSkills] = useState([])
-  const [softSkills, setSoftSkills] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [technicalSkills, setTechnicalSkills] = useState(data.technical || [])
+  const [softSkills, setSoftSkills] = useState(data.soft || [])
 
   // Inputs para nuevas habilidades
   const [newTechnicalSkill, setNewTechnicalSkill] = useState("")
@@ -45,51 +29,58 @@ const SkillsSection = () => {
 
   // 1. Cargar Habilidades
   useEffect(() => {
-    loadSkills()
-  }, [])
+    setTechnicalSkills(data.technical || [])
+    setSoftSkills(data.soft || [])
+  }, [data])
 
-  const loadSkills = async () => {
-    try {
-      const data = await skillService.getAll()
-      const formatted = data.map(mapToFrontend)
-      
-      // Separamos en dos listas
-      setTechnicalSkills(formatted.filter(s => s.type === 'TECHNICAL'))
-      setSoftSkills(formatted.filter(s => s.type === 'SOFT'))
-    } catch (err) {
-      console.error(err)
-      toast.error("Error cargando habilidades")
-    } finally {
-      setLoading(false)
-    }
-  }
 
   // --- LÓGICA: AÑADIR ---
   const addTechnicalSkill = async () => {
     if (!newTechnicalSkill.trim()) return
 
     const tempSkill = { name: newTechnicalSkill.trim(), level: "intermediate" }
-    const payload = mapToBackend(tempSkill, "technical")
+    const payload = mapToBackendSkill(tempSkill, "technical")
 
     try {
       const savedData = await skillService.create(payload)
-      setTechnicalSkills([...technicalSkills, mapToFrontend(savedData)])
+      const newSkillFrontend = mapToFrontendSkill(savedData)
+      
+      // 1. Actualizamos estado local
+      const newTechnicalList = [...technicalSkills, newSkillFrontend]
+      setTechnicalSkills(newTechnicalList)
+      
+      // 2. AVISAMOS AL PADRE (Nuevo)
+      // Pasamos el objeto completo con ambas listas (técnicas nuevas + soft actuales)
+      onUpdate({
+          technical: newTechnicalList,
+          soft: softSkills 
+      })
+
       setNewTechnicalSkill("")
       toast.success("Habilidad técnica añadida")
     } catch (error) {
       toast.error("Error al añadir habilidad")
     }
-  }
+}
 
   const addSoftSkill = async () => {
     if (!newSoftSkill.trim()) return
 
     const tempSkill = { name: newSoftSkill.trim(), level: "expert" } // Nivel dummy para soft
-    const payload = mapToBackend(tempSkill, "soft")
+    const payload = mapToBackendSkill(tempSkill, "soft")
 
     try {
       const savedData = await skillService.create(payload)
-      setSoftSkills([...softSkills, mapToFrontend(savedData)])
+      const newSkillFrontend = mapToFrontendSkill(savedData)
+      
+      // 1. Actualizamos estado local
+      const newSoftList = [...softSkills, newSkillFrontend]
+      setSoftSkills(newSoftList)
+      // 2. AVISAMOS AL PADRE (Nuevo)
+      onUpdate({
+          technical: technicalSkills,
+          soft: newSoftList 
+      })
       setNewSoftSkill("")
       toast.success("Habilidad blanda añadida")
     } catch (error) {
@@ -105,12 +96,20 @@ const SkillsSection = () => {
   }
 
   const saveUpdatedSkill = async (skill) => {
-    const payload = mapToBackend(skill, "technical")
-    toast.promise(skillService.update(skill.id, payload), {
-      loading: 'Actualizando...',
-      success: 'Habilidad actualizada',
-      error: 'Error al actualizar'
-    })
+    const payload = mapToBackendSkill(skill, "technical")
+    
+    try {
+      await skillService.update(skill.id, payload)
+      toast.success('Habilidad actualizada')
+      // AVISAR AL PADRE (IMPORTANTE)
+      onUpdate({
+        technical: technicalSkills,
+        soft: softSkills
+      })
+
+    } catch (error) {
+      toast.error('Error al actualizar')
+    }
   }
 
   // --- LÓGICA: BORRAR ---
@@ -125,20 +124,30 @@ const SkillsSection = () => {
     const id = itemToDelete
 
     // Función auxiliar para actualizar el estado correcto
-    const removeFromState = () => {
-      setTechnicalSkills(prev => prev.filter(s => s.id !== id))
-      setSoftSkills(prev => prev.filter(s => s.id !== id))
+    const updateAfterDelete = () => {
+      const newTechList = technicalSkills.filter(s => s.id !== id)
+      const newSoftList = softSkills.filter(s => s.id !== id)
+
+      // 1. Actualizar Local
+      setTechnicalSkills(newTechList)
+      setSoftSkills(newSoftList)
+
+      // 2. AVISAR AL PADRE (IMPORTANTE)
+      onUpdate({
+        technical: newTechList,
+        soft: newSoftList
+      })
     }
 
     // Si es ID temporal (string), solo borramos del estado
     if (typeof id !== 'number') {
-        removeFromState()
+        updateAfterDelete()
         return
     }
 
     try {
       await skillService.delete(id)
-      removeFromState()
+      updateAfterDelete()
       toast.success("Habilidad eliminada")
     } catch (error) {
       toast.error("Error al eliminar")
@@ -146,14 +155,13 @@ const SkillsSection = () => {
     setItemToDelete(null)
   }
 
-  const handleKeyPress = (e, type) => {
+  const handleKeyDown = (e, type) => {
     if (e.key === "Enter") {
+      e.preventDefault() 
       if (type === "technical") addTechnicalSkill()
       else addSoftSkill()
     }
   }
-
-  if (loading) return <div>Cargando habilidades...</div>
 
   return (
     <div className="space-y-6">
@@ -179,7 +187,7 @@ const SkillsSection = () => {
               type="text"
               value={newTechnicalSkill}
               onChange={(e) => setNewTechnicalSkill(e.target.value)}
-              onKeyPress={(e) => handleKeyPress(e, "technical")}
+              onKeyDown={(e) => handleKeyDown(e, "technical")}
               className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
               placeholder="Ej: JavaScript, Python, Photoshop..."
             />
@@ -258,7 +266,7 @@ const SkillsSection = () => {
               type="text"
               value={newSoftSkill}
               onChange={(e) => setNewSoftSkill(e.target.value)}
-              onKeyPress={(e) => handleKeyPress(e, "soft")}
+              onKeyDown={(e) => handleKeyDown(e, "soft")}
               className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
               placeholder="Ej: Liderazgo, Comunicación..."
             />

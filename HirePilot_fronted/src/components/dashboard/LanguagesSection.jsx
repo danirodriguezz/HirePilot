@@ -1,28 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { languageService } from "../../services/languageService" // Importar servicio
-import ConfirmModal from "../ui/ConfirmModal" // Importar Modal
-import toast from "react-hot-toast" // Importar Toast
+import { languageService, mapToBackendLenguage, mapToFrontendLanguage } from "../../services/languageService"
+import ConfirmModal from "../ui/ConfirmModal"
+import toast from "react-hot-toast" 
 
-// --- MAPPERS (Frontend <-> Backend) ---
-const mapToBackend = (lang) => ({
-  language: lang.name,          // Front: name -> Back: language
-  level: lang.proficiency,      // Front: proficiency -> Back: level
-  certificate: lang.certificates // Front: certificates -> Back: certificate
-})
-
-const mapToFrontend = (apiData) => ({
-  id: apiData.id,
-  name: apiData.language,
-  proficiency: apiData.level || "B1", // Valor por defecto si viene nulo
-  certificates: apiData.certificate || "",
-})
-
-const LanguagesSection = () => {
-  const [languages, setLanguages] = useState([])
-  const [loading, setLoading] = useState(true)
-
+const LanguagesSection = ({data, onUpdate}) => {
+  const [languages, setLanguages] = useState(data)
   // Estados del Modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [itemToDelete, setItemToDelete] = useState(null)
@@ -40,39 +24,30 @@ const LanguagesSection = () => {
 
   // 1. Cargar datos
   useEffect(() => {
-    loadLanguages()
-  }, [])
-
-  const loadLanguages = async () => {
-    try {
-      const data = await languageService.getAll()
-      setLanguages(data.map(mapToFrontend))
-    } catch (err) {
-      console.error(err)
-      toast.error("Error cargando idiomas")
-    } finally {
-      setLoading(false)
-    }
-  }
+    setLanguages(data)
+  }, [data])
 
   // 2. Guardar (Crear o Editar)
   const handleSave = async (langLocal) => {
     const saveAction = async () => {
-      const payload = mapToBackend(langLocal)
-      let savedData;
+      const payload = mapToBackendLenguage(langLocal)
+      let savedDataBackend;
 
       if (langLocal.id && typeof langLocal.id !== 'number') {
          // Crear (ID temporal)
-         savedData = await languageService.create(payload)
+         savedDataBackend = await languageService.create(payload)
       } else {
          // Actualizar (ID real)
-         savedData = await languageService.update(langLocal.id, payload)
+         savedDataBackend = await languageService.update(langLocal.id, payload)
       }
 
-      setLanguages(prev => prev.map(l => 
-        l.id === langLocal.id ? mapToFrontend(savedData) : l
-      ))
-      return savedData
+      const savedDataFronted = mapToFrontendLanguage(savedDataBackend)
+      const newList = languages.map(l => 
+        l.id === langLocal.id ? savedDataFronted : l
+      )
+      setLanguages(newList)
+      onUpdate(newList) // Notificar al padre
+      return savedDataBackend;
     }
 
     toast.promise(saveAction(), {
@@ -129,8 +104,6 @@ const LanguagesSection = () => {
       (lang.id === id ? { ...lang, [field]: value } : lang)
     ))
   }
-
-  if (loading) return <div className="p-6 text-center text-gray-500">Cargando idiomas...</div>
 
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6">

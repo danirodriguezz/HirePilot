@@ -15,6 +15,13 @@ import ProjectsSection from "../../components/dashboard/ProjectsSection"
 import JobDescriptionSection from "../../components/dashboard/JobDescriptionSection"
 import GenerateCVSection from "../../components/dashboard/GenerateCVSection"
 import { generateCVApi } from "../../services/cvService"
+import { experienceService, mapToFrontend } from "../../services/experienceService"
+import { profileService, mapProfileToFrontend } from "../../services/profileService"
+import { educationService, mapToFrontendEducation } from "../../services/educationService"
+import { certificateService, mapToFrontendCertificate } from "../../services/certificateService"
+import { languageService, mapToFrontendLanguage } from "../../services/languageService"
+import { skillService, mapToFrontendSkill } from "../../services/skillService"
+import { projectService, mapToFrontendProject } from "../../services/projectService"
 
 const Dashboard = () => {
   const [activeSection, setActiveSection] = useState("profile")
@@ -51,38 +58,96 @@ const Dashboard = () => {
   })
   const [isGenerating, setIsGenerating] = useState(false)
 
-  // NUEVO: Obtener datos del usuario autenticado
+  // 1. CARGA DE DATOS UNIFICADA
   useEffect(() => {
-      async function fetchUser() {
-        try {
-          const res = await api.get("/me/")
-          setUserData(prev => {
-            const newState = {
-              ...prev,
-              profile: {
-                ...prev.profile,
-                firstName: res.data.first_name || "",
-                lastName: res.data.last_name || "",
-                email: res.data.email || "",
-                phone: res.data.profile?.phone || "",
-                summary: res.data.profile?.summary || "",
-                profession: res.data.profile?.headline || "",
-                yearsOfExperience: res.data.profile?.years_of_experience || "",
-                linkedin: res.data.profile?.linkedin_url || "",
-              },
-            };
-            return newState;
-          });
-      } catch (err) {
-        console.error("Error obteniendo usuario:", err)
+    async function fetchAllData() {
+      try {
+        // Usamos Promise.all para pedir todo a la vez
+        const [userRaw, experienceRes, educationRes, certificatesRes, languagesRes, skillsRes, projectsRes] = await Promise.all([
+          profileService.getProfile(),
+          experienceService.getAll(),
+          educationService.getAll(),
+          certificateService.getAll(),
+          languageService.getAll(),
+          skillService.getAll(),
+          projectService.getAll()
+        ]);
 
-        if(err.response?.status === 401) navigate('/login');
+        setUserData(prev => ({
+          ...prev,
+          profile: mapProfileToFrontend(userRaw),
+          experience: experienceRes.map(mapToFrontend),
+          education: educationRes.map(mapToFrontendEducation),
+          certificates: certificatesRes.map(mapToFrontendCertificate),
+          languages: languagesRes.map(mapToFrontendLanguage),
+          skills: {
+            technical: skillsRes.filter(s => s.skill_type === "TECHNICAL").map(mapToFrontendSkill),
+            soft: skillsRes.filter(s => s.skill_type === "SOFT").map(mapToFrontendSkill)
+          }
+          ,
+          projects: projectsRes.map(mapToFrontendProject)
+        }));
+
+      } catch (err) {
+        console.error("Error cargando datos:", err)
+        if(err.response?.status === 401) { /* lógica de redirect */ }
       } finally {
         setIsInitialLoading(false)
       }
     }
-    fetchUser()
+
+    fetchAllData()
   }, [])
+
+  const updateUserData = (section, data) => {
+    setUserData((prev) => ({
+      ...prev,
+      [section]: data,
+    }))
+  }
+
+  // Esta función se la pasaremos al hijo para que nos avise cuando guarde/borre
+  const handleExperienceUpdate = (updatedExperienceList) => {
+    setUserData(prev => ({
+      ...prev,
+      experience: updatedExperienceList
+    }))
+  }
+
+  const handleEducationUpdate = (updatedEducationList) => {
+    setUserData(prev => ({
+      ...prev,
+      education: updatedEducationList
+    }))
+  }
+
+  const handleCertificateUpdate = (updatedCertificateList) => {
+    setUserData(prev => ({
+      ...prev,
+      certificates: updatedCertificateList
+    }))
+  }
+
+  const handleLenguageUpdate = (updatedLanguageList) => {
+    setUserData(prev => ({
+      ...prev,
+      languages: updatedLanguageList
+    }))
+  }
+
+  const handleSkillUpdate = (updatedSkillList) => {
+    setUserData(prev => ({
+      ...prev,
+      skills: updatedSkillList
+    }))
+  }
+
+  const handleProjectUpdate = (updatedProjectList) => {
+    setUserData(prev => ({
+      ...prev,
+      projects: updatedProjectList
+    }))
+  }
 
   // Cerrar el menú si se hace click fuera
   useEffect(() => {
@@ -96,29 +161,22 @@ const Dashboard = () => {
   }, [])
 
   const handleLogout = async () => {
-  try {
-    const refreshToken = localStorage.getItem("refresh_token");
-    if (refreshToken) {
-      await api.post("/logout/", { refresh: refreshToken });
+    try {
+      const refreshToken = localStorage.getItem("refresh_token");
+      if (refreshToken) {
+        await api.post("/logout/", { refresh: refreshToken });
+      }
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      localStorage.removeItem("user_data");
+      navigate("/login");
+    } catch (error) {
+      console.error("Error al cerrar sesión:", error);
+      // Opcional: también puedes redirigir aquí si quieres
+      navigate("/login");
     }
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-    localStorage.removeItem("user_data");
-    navigate("/login");
-  } catch (error) {
-    console.error("Error al cerrar sesión:", error);
-    // Opcional: también puedes redirigir aquí si quieres
-    navigate("/login");
-  }
-};
+  };
 
-
-  const updateUserData = (section, data) => {
-    setUserData((prev) => ({
-      ...prev,
-      [section]: data,
-    }))
-  }
 
   // Función para obtener las iniciales
   const getInitials = (firstName, lastName) => {
@@ -127,11 +185,11 @@ const Dashboard = () => {
     return (first + last).toUpperCase()
   }
 
-// MODIFICADO: Lógica real para conectar con el Backend
+  // MODIFICADO: Lógica real para conectar con el Backend
   const handleGenerateCV = async (jobDescription) => {
     setIsGenerating(true)
     setGeneratedCV(null) 
-    
+
     try {
       const response = await generateCVApi(jobDescription)
 
@@ -163,19 +221,21 @@ const Dashboard = () => {
       case "profile":
         return <ProfileSection data={userData.profile} onUpdate={(data) => updateUserData("profile", data)} />
       case "experience":
-        return <ExperienceSection data={userData.experience} onUpdate={(data) => updateUserData("experience", data)} />
+        return <ExperienceSection data={userData.experience} onUpdate={handleExperienceUpdate} />
       case "education":
-        return <EducationSection data={userData.education} onUpdate={(data) => updateUserData("education", data)} />
+        return <EducationSection data={userData.education} onUpdate={handleEducationUpdate} />
       case "certificates":
         return (
-          <CertificatesSection data={userData.certificates} onUpdate={(data) => updateUserData("certificates", data)} />
+          <CertificatesSection data={userData.certificates} onUpdate={handleCertificateUpdate} />
         )
       case "languages":
-        return <LanguagesSection data={userData.languages} onUpdate={(data) => updateUserData("languages", data)} />
+        return <LanguagesSection data={userData.languages} onUpdate={handleLenguageUpdate} />
       case "skills":
-        return <SkillsSection data={userData.skills} onUpdate={(data) => updateUserData("skills", data)} />
+        return <SkillsSection data={userData.skills} onUpdate={handleSkillUpdate} />
       case "projects":
-        return <ProjectsSection data={userData.projects} onUpdate={(data) => updateUserData("projects", data)} />
+        return <ProjectsSection data={userData.projects} 
+            availableSkills={[...userData.skills.technical, ...userData.skills.soft]} 
+            onUpdate={handleProjectUpdate} />
       case "generate":
         return (
           <div className="space-y-6">

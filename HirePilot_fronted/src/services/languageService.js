@@ -1,5 +1,20 @@
 import api from '../api/axiosInstance';
 
+// --- MAPPERS (Frontend <-> Backend) ---
+export const mapToBackendLenguage = (lang) => ({
+  language: lang.name,          // Front: name -> Back: language
+  level: lang.proficiency,      // Front: proficiency -> Back: level
+  certificate: lang.certificates // Front: certificates -> Back: certificate
+})
+
+export const mapToFrontendLanguage = (apiData) => ({
+  id: apiData.id,
+  name: apiData.language,
+  proficiency: apiData.level || "B1", // Valor por defecto si viene nulo
+  certificates: apiData.certificate || "",
+})
+
+
 export const languageService = {
   // Listar
   getAll: async () => {

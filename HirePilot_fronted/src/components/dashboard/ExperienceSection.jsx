@@ -1,75 +1,49 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { experienceService } from "../../services/experienceService"
+import { experienceService, mapToBackend, mapToFrontend } from "../../services/experienceService"
 import ConfirmModal from "../ui/ConfirmModal"
-import CustomDatePicker from "../ui/CustomDatePicker" // Asegúrate de que la ruta sea correcta
+import CustomDatePicker from "../ui/CustomDatePicker"
 import toast from "react-hot-toast"
 
-// --- MAPPERS ---
-const mapToBackend = (exp) => ({
-  company: exp.company,
-  role: exp.position,
-  location: exp.location,
-  description: exp.description,
-  start_date: exp.startDate ? `${exp.startDate}-01` : null,
-  end_date: exp.endDate ? `${exp.endDate}-01` : null,
-  current_job: exp.current,
-  achievements: exp.achievements.map(text => ({ description: text, keywords: [] }))
-})
 
-const mapToFrontend = (apiData) => ({
-  id: apiData.id,
-  company: apiData.company,
-  position: apiData.role,
-  location: apiData.location,
-  description: apiData.description || "",
-  startDate: apiData.start_date ? apiData.start_date.substring(0, 7) : "",
-  endDate: apiData.end_date ? apiData.end_date.substring(0, 7) : "",
-  current: apiData.current_job,
-  achievements: apiData.achievements ? apiData.achievements.map(a => a.description) : [""]
-})
-
-const ExperienceSection = () => {
-  const [experiences, setExperiences] = useState([])
-  const [loading, setLoading] = useState(true)
+const ExperienceSection = ({ data, onUpdate }) => {
+  const [experiences, setExperiences] = useState(data)
   
   // Estado para el Modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [itemToDelete, setItemToDelete] = useState(null)
 
+  // Sincroniza si el padre cambia los datos (ej. al terminar de cargar la API)
   useEffect(() => {
-    loadExperiences()
-  }, [])
-
-  const loadExperiences = async () => {
-    try {
-      const data = await experienceService.getAll()
-      setExperiences(data.map(mapToFrontend))
-    } catch (err) {
-      console.error(err)
-      toast.error("No se pudo cargar la experiencia")
-    } finally {
-      setLoading(false)
-    }
-  }
+    setExperiences(data)
+  }, [data])
 
   // --- LÓGICA DE GUARDADO ---
   const handleSave = async (experienceLocal) => {
     const saveAction = async () => {
       const payload = mapToBackend(experienceLocal)
-      let savedData;
+      let savedDataBackend;
 
       if (experienceLocal.id && typeof experienceLocal.id !== 'number') {
-         savedData = await experienceService.create(payload)
+         savedDataBackend = await experienceService.create(payload)
       } else {
-         savedData = await experienceService.update(experienceLocal.id, payload)
+         savedDataBackend = await experienceService.update(experienceLocal.id, payload)
       }
 
-      setExperiences(prev => prev.map(e => 
-        e.id === experienceLocal.id ? mapToFrontend(savedData) : e
-      ))
-      return savedData
+      // 2. Convertir respuesta a Frontend
+      const savedDataFrontend = mapToFrontend(savedDataBackend)
+
+      // 3. Actualizar Estado Local
+      const newList = experiences.map(e => 
+        e.id === experienceLocal.id ? savedDataFrontend : e
+      )
+      setExperiences(newList)
+      
+      // 4. IMPORTANTE: Actualizar al Padre para que tenga la versión nueva
+      onUpdate(newList)
+
+      return savedDataFrontend
     }
 
     toast.promise(saveAction(), {
@@ -96,7 +70,12 @@ const ExperienceSection = () => {
       if (!isTemp) {
         await experienceService.delete(id)
       }
-      setExperiences(prev => prev.filter(e => e.id !== id))
+      // Actualizar estado local
+      const newList = experiences.filter(e => e.id !== id)
+      setExperiences(newList)
+      
+      // Actualizar al Padre
+      onUpdate(newList)
     }
 
     if (isTemp) {
@@ -154,8 +133,6 @@ const ExperienceSection = () => {
       exp.id === expId ? { ...exp, achievements: exp.achievements.filter((_, i) => i !== index) } : exp
     ))
   }
-
-  if (loading) return <div className="p-6 text-center text-gray-500">Cargando experiencia...</div>
 
   return (
     <div className="space-y-6">

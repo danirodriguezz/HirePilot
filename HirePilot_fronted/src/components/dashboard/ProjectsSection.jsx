@@ -1,44 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { projectService } from "../../services/projectService"
+import { useState, useEffect, use } from "react"
+import { projectService, mapToBackendProject, mapToFrontendProject } from "../../services/projectService"
 import { skillService } from "../../services/skillService"
 import toast from "react-hot-toast"
 import ConfirmModal from "../ui/ConfirmModal"
 import CustomDatePicker from "../ui/CustomDatePicker"
 
-// --- MAPPERS ---
-const mapToBackend = (proj) => ({
-  title: proj.title,
-  role: proj.role,
-  organization: proj.organization,
-  category: proj.category,
-  description: proj.description,
-  project_url: proj.url,
-  resource_url: proj.resource,
-  start_date: proj.startDate ? `${proj.startDate}-01` : null,
-  end_date: proj.endDate ? `${proj.endDate}-01` : null,
-  skills: proj.selectedSkills || [] 
-})
-
-const mapToFrontend = (apiData) => ({
-  id: apiData.id,
-  title: apiData.title,
-  role: apiData.role || "",
-  organization: apiData.organization || "",
-  category: apiData.category || "PROFESSIONAL",
-  description: apiData.description || "",
-  url: apiData.project_url || "",
-  resource: apiData.resource_url || "",
-  startDate: apiData.start_date ? apiData.start_date.substring(0, 7) : "",
-  endDate: apiData.end_date ? apiData.end_date.substring(0, 7) : "",
-  selectedSkills: apiData.skills || [] 
-})
-
-const ProjectsSection = () => {
-  const [projects, setProjects] = useState([])
-  const [availableSkills, setAvailableSkills] = useState([]) 
-  const [loading, setLoading] = useState(true)
+const ProjectsSection = ({data, availableSkills, onUpdate}) => {
+  const [projects, setProjects] = useState(data || []) 
 
   // Estados Modal Borrado
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -54,36 +24,31 @@ const ProjectsSection = () => {
 
   // 1. Cargar Proyectos y Skills disponibles
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [projectsData, skillsData] = await Promise.all([
-          projectService.getAll(),
-          skillService.getAll()
-        ])
-        setProjects(projectsData.map(mapToFrontend))
-        setAvailableSkills(skillsData) 
-      } catch (err) {
-        console.error(err)
-        toast.error("Error cargando datos")
-      } finally {
-        setLoading(false)
-      }
-    }
-    loadData()
-  }, [])
+    setProjects(data)
+  }, [data])
 
   // 2. Guardar
   const handleSave = async (projLocal) => {
     const saveAction = async () => {
-      const payload = mapToBackend(projLocal)
-      let savedData
+      const payload = mapToBackendProject(projLocal) // Usamos mapper importado
+      let savedDataBackend
+      
       if (projLocal.id && typeof projLocal.id !== 'number') {
-         savedData = await projectService.create(payload)
+         savedDataBackend = await projectService.create(payload)
       } else {
-         savedData = await projectService.update(projLocal.id, payload)
+         savedDataBackend = await projectService.update(projLocal.id, payload)
       }
-      setProjects(prev => prev.map(p => p.id === projLocal.id ? mapToFrontend(savedData) : p))
-      return savedData
+
+      const savedDataFrontend = mapToFrontendProject(savedDataBackend)
+
+      // Actualizar local
+      const newList = projects.map(p => p.id === projLocal.id ? savedDataFrontend : p)
+      setProjects(newList)
+      
+      // Actualizar PADRE
+      onUpdate(newList)
+
+      return savedDataFrontend
     }
 
     toast.promise(saveAction(), {
@@ -107,7 +72,11 @@ const ProjectsSection = () => {
 
     const deleteAction = async () => {
       if (!isTemp) await projectService.delete(id)
-      setProjects(prev => prev.filter(p => p.id !== id))
+      
+      const newList = projects.filter(p => p.id !== id)
+      setProjects(newList)
+      // Actualizar PADRE
+      onUpdate(newList)
     }
 
     if (isTemp) {
@@ -158,7 +127,6 @@ const ProjectsSection = () => {
     }))
   }
 
-  if (loading) return <div>Cargando portafolio...</div>
 
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6">
