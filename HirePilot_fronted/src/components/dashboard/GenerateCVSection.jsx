@@ -42,22 +42,24 @@ const GenerateCVSection = ({ userData, onGenerate, isGenerating, generatedCV }) 
   }
 
   const getCompletionPercentage = () => {
-    let completed = 0
-    const total = 7
+    let completedSections = 0
+    const total = 8
+  
+    const { firstName, lastName, profession, email } = userData.profile;
+    if (firstName && lastName && profession && email) completedSections++;
+    if (userData.experience.length > 0) completedSections++;
+    if (userData.education.length > 0) completedSections++;
+    if (userData.certificates.length > 0) completedSections++;
+    if (userData.languages.length > 0) completedSections++;
+    if (userData.skills.technical.length > 0 || userData.skills.soft.length > 0) completedSections++;
+    if (userData.projects.length > 0) completedSections++;
+    if (userData.jobDescription?.trim()) completedSections++; 
 
-    if (userData.profile.firstName && userData.profile.lastName) completed++
-    if (userData.experience.length > 0) completed++
-    if (userData.education.length > 0) completed++
-    if (userData.skills.technical.length > 0 || userData.skills.soft.length > 0) completed++
-    if (userData.languages.length > 0) completed++
-    if (userData.jobDescription?.trim()) completed++ 
-    if (userData.profile.summary?.trim()) completed++
-
-    return Math.round((completed / total) * 100)
+    return Math.round((completedSections / total) * 100)
   }
 
   const completionPercentage = getCompletionPercentage()
-  const canGenerate = completionPercentage >= 40 && userData.jobDescription?.trim()
+  const canGenerate = completionPercentage >= 60 && userData.jobDescription?.trim()
 
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6">

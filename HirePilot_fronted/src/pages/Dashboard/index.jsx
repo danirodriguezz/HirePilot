@@ -177,6 +177,23 @@ const Dashboard = () => {
     }
   };
 
+  // --- LÓGICA DE BARRA DE PROGRESO ---
+  const calculateProgress = () => {
+    let completedSections = 0;
+    const totalSections = 7;
+    const { firstName, lastName, profession, email } = userData.profile;
+    if (firstName && lastName && profession && email) completedSections++;
+    if (userData.experience.length > 0) completedSections++;
+    if (userData.education.length > 0) completedSections++;
+    if (userData.certificates.length > 0) completedSections++;
+    if (userData.languages.length > 0) completedSections++;
+    if (userData.skills.technical.length > 0 || userData.skills.soft.length > 0) completedSections++;
+    if (userData.projects.length > 0) completedSections++;
+    
+    return Math.round((completedSections / totalSections) * 100);
+  }
+
+  const progressPercentage = calculateProgress();
 
   // Función para obtener las iniciales
   const getInitials = (firstName, lastName) => {
@@ -340,20 +357,20 @@ const Dashboard = () => {
         <main className="flex-1 lg:ml-64">
           <div className="p-4 sm:p-6 lg:p-8">
             <div className="max-w-4xl mx-auto">
-              {/* Progress Bar */}
+              {/* Progress Bar DINÁMICA */}
               <div className="mb-8">
                 <div className="flex items-center justify-between mb-2">
                   <h1 className="text-2xl font-bold text-gray-900">
                     {sections.find((s) => s.id === activeSection)?.name}
                   </h1>
                   <div className="text-sm text-gray-600">
-                    Completado: <span className="font-semibold text-emerald-600">75%</span>
+                    Completado: <span className="font-semibold text-emerald-600">{progressPercentage}%</span>
                   </div>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
-                    className="bg-emerald-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: "75%" }}
+                    className="bg-emerald-600 h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${progressPercentage}%` }}
                   ></div>
                 </div>
               </div>
