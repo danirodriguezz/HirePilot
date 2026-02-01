@@ -262,7 +262,7 @@ const Dashboard = () => {
             />
             <GenerateCVSection 
               userData={userData} 
-              onGenerate={handleGenerateCV} 
+              onGenerate={handleGenerateCV}
               isGenerating={isGenerating}
               generatedCV={generatedCV} // <--- NUEVA PROP: Pasamos el resultado
             />

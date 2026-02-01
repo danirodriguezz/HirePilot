@@ -18,21 +18,36 @@ class CVGeneratorService:
         )
 
     def generate_cv(self):
-        # 1. Recopilar datos (Master Data)
+        """
+        Orquestador principal.
+        Combina la inteligencia de la IA con la veracidad de la Base de Datos.
+        """
+        # 1. Recopilar datos maestros (Master Data) de la DB
         user_data = self._gather_user_data()
 
-        # 2. Si no hay API KEY configurada, usamos el Mock (seguridad para desarrollo)
+        # 2. Obtener contenido generado (Ya sea Mock o AI)
+        ai_generated_content = {}
+
         if not settings.OPENAI_API_KEY:
             logger.warning("OPENAI_API_KEY no encontrada. Usando modo MOCK.")
-            return self._mock_ai_logic(user_data)
+            ai_generated_content = self._mock_ai_logic(user_data)
+        else:
+            try:
+                ai_generated_content = self._call_openai(user_data)
+            except Exception as e:
+                error_msg = str(e).encode('ascii', 'replace').decode('ascii')
+                logger.error(f"Error llamando a OpenAI: {error_msg}")
+                ai_generated_content = self._mock_ai_logic(user_data)
 
-        # 3. Llamada Real a la IA
-        try:
-            return self._call_openai(user_data)
-        except Exception as e:
-            error_msg = str(e).encode('ascii', 'replace').decode('ascii')
-            logger.error(f"Error llamando a OpenAI: {error_msg}")
-            return self._mock_ai_logic(user_data)
+        # 3. MERGE FINAL (ESTRATEGIA HÍBRIDA)
+        # Inyectamos los datos personales VERIFICADOS de la DB en la respuesta final.
+        # Esto asegura que el nombre, email y teléfono nunca sean alucinados por la IA.
+        final_response = {
+            "profile": user_data["personal_info"],  # Datos estáticos (DB)
+            **ai_generated_content                  # Datos dinámicos (IA)
+        }
+        
+        return final_response
 
     def _call_openai(self, user_data):
         """
@@ -100,9 +115,13 @@ class CVGeneratorService:
         }
         """
 
+        # Filtramos datos sensibles antes de enviarlos a la IA (Privacidad)
+        # La IA no necesita saber el teléfono o email para optimizar el texto
+        safe_user_data = {k: v for k, v in user_data.items() if k != 'personal_info'}
+
         user_message = f"""
         PERFIL CANDIDATO:
-        {json.dumps(user_data, default=str, ensure_ascii=False)}
+        {json.dumps(safe_user_data, default=str, ensure_ascii=False)}
 
         OFERTA DE TRABAJO:
         {clean_job_description}
@@ -204,12 +223,13 @@ class CVGeneratorService:
 
         return {
             "personal_info": {
-                "full_name": f"{self.user.first_name} {self.user.last_name}",
+                "firstName": self.user.first_name,
+                "lastName": self.user.last_name,
+                "profession": profile.headline if profile else "",
                 "email": self.user.email,
                 "phone": profile.phone if profile else "",
                 "linkedin": profile.linkedin_url if profile else "",
                 "website": profile.personal_website if profile else "",
-                "summary": profile.summary if profile else ""
             },
             "experience": experiences,
             "education": educations,

@@ -180,7 +180,11 @@ const GenerateCVSection = ({ userData, onGenerate, isGenerating, generatedCV }) 
 
             <div className="flex gap-4 justify-center">
                 <PDFDownloadLink
-                    document={<CVDocument data={generatedCV} />}
+                    document={
+                      <CVDocument 
+                        data={generatedCV} 
+                        template={selectedTemplate}
+                        />}
                     fileName={`CV_HirePilot_${generatedCV.job_title_target?.replace(/[^a-z0-9]/gi, '_') || 'Optimized'}.pdf`}
                     className="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-lg shadow-lg hover:scale-105 transition-all flex items-center gap-2"
                 >
