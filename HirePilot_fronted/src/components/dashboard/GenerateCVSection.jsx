@@ -13,19 +13,19 @@ const GenerateCVSection = ({ userData, onGenerate, isGenerating, generatedCV }) 
       id: "modern",
       name: "Moderno",
       description: "Diseño limpio y profesional",
-      preview: "/placeholder.svg?height=200&width=150&text=Moderno",
+      preview: "/templates/modern.png",
     },
     {
       id: "classic",
       name: "Clásico",
       description: "Formato tradicional y elegante",
-      preview: "/placeholder.svg?height=200&width=150&text=Clásico",
+      preview: "/templates/classic.png",
     },
     {
       id: "creative",
       name: "Creativo",
       description: "Para profesionales del diseño",
-      preview: "/placeholder.svg?height=200&width=150&text=Creativo",
+      preview: "/templates/creative.png",
     },
   ]
 
@@ -111,7 +111,7 @@ const GenerateCVSection = ({ userData, onGenerate, isGenerating, generatedCV }) 
                 <img
                   src={template.preview || "/placeholder.svg"}
                   alt={template.name}
-                  className="w-full h-32 object-cover rounded mb-3 bg-gray-100"
+                  className="w-full h-40 object-cover object-top hover:scale-105 transition-transform duration-500"
                 />
                 <h4 className="font-medium text-gray-900">{template.name}</h4>
                 <p className="text-sm text-gray-600">{template.description}</p>
