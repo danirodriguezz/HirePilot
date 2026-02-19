@@ -172,3 +172,4 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = 'noreply@hirepilot.com'
 
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+AI_MODEL = os.getenv('AI_MODEL')  # Puedes cambiar el modelo por defecto aquí

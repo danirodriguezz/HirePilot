@@ -128,7 +128,7 @@ class CVGeneratorService:
         """
 
         completion = self.client.chat.completions.create(
-            model="openai/gpt-oss-120b:free",
+            model=settings.AI_MODEL,
             # Headers requeridos/recomendados por OpenRouter para rankings
             extra_headers={
                 "HTTP-Referer": "http://localhost:8000", # Pon la URL de tu app (o localhost en dev)
