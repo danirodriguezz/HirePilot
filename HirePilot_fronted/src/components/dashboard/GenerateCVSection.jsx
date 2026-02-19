@@ -38,7 +38,7 @@ const GenerateCVSection = ({ userData, onGenerate, isGenerating, generatedCV }) 
   const handleGenerate = () => {
     // Solo pasamos la descripción, el backend ya tiene el usuario. 
     // Si tu lógica requiere pasar template/idioma al backend, añádelos aquí.
-    onGenerate(userData.jobDescription)
+    onGenerate(userData.jobDescription, selectedLanguage)
   }
 
   const getCompletionPercentage = () => {
@@ -184,6 +184,7 @@ const GenerateCVSection = ({ userData, onGenerate, isGenerating, generatedCV }) 
                       <CVDocument 
                         data={generatedCV} 
                         template={selectedTemplate}
+                        language={selectedLanguage}
                         />}
                     fileName={`CV_HirePilot_${generatedCV.job_title_target?.replace(/[^a-z0-9]/gi, '_') || 'Optimized'}.pdf`}
                     className="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-lg shadow-lg hover:scale-105 transition-all flex items-center gap-2"

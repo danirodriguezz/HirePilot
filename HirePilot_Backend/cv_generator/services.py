@@ -8,9 +8,10 @@ from accounts.models import UserProfile, WorkExperience, Education, Skill, Proje
 logger = logging.getLogger(__name__)
 
 class CVGeneratorService:
-    def __init__(self, user, job_description):
+    def __init__(self, user, job_description, language):
         self.user = user
         self.job_description = job_description
+        self.language = language
 
         self.client = OpenAI(
             base_url="https://openrouter.ai/api/v1",
@@ -56,8 +57,13 @@ class CVGeneratorService:
 
         # 1. Limpieza de caracteres "peligrosos" o no imprimibles
         clean_job_description = self._sanitize_text(self.job_description)
-
-        system_prompt = """
+        language_map = {
+            'es': 'Español',
+            'en': 'Inglés',
+            'fr': 'Francés'
+        }
+        target_language = language_map.get(self.language)
+        system_prompt = f"""
         Eres un experto reclutador de TI y especialista en redacción de CVs optimizados para ATS.
         
         TU MISIÓN: 
@@ -74,9 +80,11 @@ class CVGeneratorService:
         5. **Proyectos:** Elige solo aquellos proyectos que demuestren habilidades requeridas en la oferta.
         6. **Educación y Certificados:** Prioriza los relacionados con el puesto o tecnología.
         7. **Idiomas:** Inclúyelos estandarizados.
-
+        8. **IDIOMA DE SALIDA (MUY IMPORTANTE):** TODO el contenido generado (job_title_target, profile_summary, enhanced_description, títulos, etc.) DEBE estar redactado estrictamente en {target_language}. Si la Base de Datos Maestra está en un idioma distinto, tradúcelo fielmente a {target_language} sin inventar información que no exista originalmente.
+        
         SALIDA JSON OBLIGATORIA:
         Debes responder EXCLUSIVAMENTE con un JSON válido siguiendo esta estructura exacta:
+        """ + """
         {
             "job_title_target": "String",
             "profile_summary": "String",

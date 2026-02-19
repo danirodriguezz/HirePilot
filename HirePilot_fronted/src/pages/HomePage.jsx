@@ -38,7 +38,7 @@ function HomePage() {
         showNavigation={true}
         autoplay={false}
       />
-      <Pricing />
+      {/* <Pricing /> */}
       <CTA />
       <Footer />
     </div>

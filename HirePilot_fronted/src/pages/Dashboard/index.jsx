@@ -203,12 +203,12 @@ const Dashboard = () => {
   }
 
   // MODIFICADO: Lógica real para conectar con el Backend
-  const handleGenerateCV = async (jobDescription) => {
+  const handleGenerateCV = async (jobDescription, language) => {
     setIsGenerating(true)
     setGeneratedCV(null) 
 
     try {
-      const response = await generateCVApi(jobDescription)
+      const response = await generateCVApi(jobDescription, language)
 
       console.log("CV Generado:", response)
 

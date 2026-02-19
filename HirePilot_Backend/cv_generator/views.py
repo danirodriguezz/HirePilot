@@ -13,10 +13,10 @@ class GenerateCVView(APIView):
         serializer = CVGenerationRequestSerializer(data=request.data)
         if serializer.is_valid():
             job_desc = serializer.validated_data['job_description']
+            language = serializer.validated_data.get('language', 'es')
             
             # Instanciamos el servicio
-            generator = CVGeneratorService(user=request.user, job_description=job_desc)
-              # Debug: Verificar el usuario
+            generator = CVGeneratorService(user=request.user, job_description=job_desc, language=language)
             try:
                 # Obtenemos el JSON estructurado (lógica de IA)
                 ai_result_json = generator.generate_cv()
