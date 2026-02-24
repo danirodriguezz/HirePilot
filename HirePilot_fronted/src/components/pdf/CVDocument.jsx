@@ -2,7 +2,7 @@ import React from 'react';
 import { Document, Page, Text, View, StyleSheet, Font, Link, Image } from '@react-pdf/renderer';
 
 // ==========================================
-// 1. REGISTRO DE FUENTES (Mantenido igual)
+// 1. REGISTRO DE FUENTES
 // ==========================================
 import RobotoRegular from '../../assets/fonts/Roboto/roboto-v50-latin-regular.ttf';
 import RobotoItalic from '../../assets/fonts/Roboto/roboto-v50-latin-italic.ttf';
@@ -21,7 +21,7 @@ Font.register({ family: 'Merriweather', fonts: [ { src: MerriweatherRegular, fon
 Font.register({ family: 'Lato', fonts: [ { src: LatoRegular, fontWeight: 400 }, { src: LatoBold, fontWeight: 700 }, ] });
 
 // ==========================================
-// 2. DICCIONARIO DE TRADUCCIONES (NUEVO)
+// 2. DICCIONARIO DE TRADUCCIONES
 // ==========================================
 const TRANSLATIONS = {
   es: {
@@ -63,10 +63,8 @@ const TRANSLATIONS = {
 };
 
 // ==========================================
-// 3. UTILIDADES Y HELPERS (ACTUALIZADOS)
+// 3. UTILIDADES Y HELPERS
 // ==========================================
-
-// Añadimos el parámetro de idioma para usar el Locale nativo de JS
 const formatDate = (dateString, lang = 'es') => {
   if (!dateString) return '';
   const date = new Date(dateString);
@@ -83,7 +81,6 @@ const parseDateRange = (dateRangeString) => {
   const startDate = parts[0] ? parts[0].trim() : null;
   const endDateRaw = parts[1] ? parts[1].trim() : null;
   
-  // Ampliado para detectar la palabra "presente" en cualquier idioma que responda la IA
   const isCurrent = endDateRaw?.toLowerCase().includes('present') || 
                     endDateRaw?.toLowerCase().includes('actualidad') ||
                     endDateRaw?.toLowerCase().includes('présent');
@@ -96,7 +93,7 @@ const parseDateRange = (dateRangeString) => {
 };
 
 // ==========================================
-// 4. LAYOUTS (ACTUALIZADOS PARA USAR TRADUCCIÓN)
+// 4. LAYOUTS
 // ==========================================
 
 // --- TEMPLATE 1: MODERNO ---
@@ -145,29 +142,39 @@ const ModernLayout = ({ data, t, lang }) => {
         <View style={{ marginBottom: 20 }}>
             <Text style={styles.name}>{data.profile.firstName} {data.profile.lastName}</Text>
             <Text style={styles.role}>{data.job_title_target || data.profile.profession}</Text>
-            <Text style={styles.textMain}>{data.profile.summary}</Text>
+            <Text style={styles.textMain} maxLines={4}>{data.profile.summary}</Text>
         </View>
 
-        <Text style={styles.sectionTitleMain}>{t.experience}</Text>
-        {data.experience?.map((exp, i) => (
-          <View key={i} style={{ marginBottom: 10 }} wrap={false}>
-            <View style={styles.jobHeader}>
-              <Text style={styles.jobTitle}>{exp.jobTitle}</Text>
-              <Text style={styles.date}>{formatDate(exp.startDate, lang)} - {exp.current ? t.present : formatDate(exp.endDate, lang)}</Text>
-            </View>
-            <Text style={styles.company}>{exp.company}</Text>
-            <Text style={{...styles.textMain, marginTop: 5}}>{exp.description}</Text>
-          </View>
-        ))}
+        {/* RENDERIZADO CONDICIONAL DE EXPERIENCIA */}
+        {data.experience && data.experience.length > 0 && (
+          <>
+            <Text style={styles.sectionTitleMain}>{t.experience}</Text>
+            {data.experience.map((exp, i) => (
+              <View key={i} style={{ marginBottom: 10 }} wrap={false}>
+                <View style={styles.jobHeader}>
+                  <Text style={styles.jobTitle}>{exp.jobTitle}</Text>
+                  <Text style={styles.date}>{formatDate(exp.startDate, lang)} - {exp.current ? t.present : formatDate(exp.endDate, lang)}</Text>
+                </View>
+                <Text style={styles.company}>{exp.company}</Text>
+                <Text style={{...styles.textMain, marginTop: 5}} maxLines={3}>{exp.description}</Text>
+              </View>
+            ))}
+          </>
+        )}
 
-        <Text style={styles.sectionTitleMain}>{t.education}</Text>
-        {data.education?.map((edu, i) => (
-           <View key={i} style={{ marginBottom: 8 }} wrap={false}>
-             <Text style={{ fontWeight: 700, fontSize: 11 }}>{edu.degree}</Text>
-             <Text style={styles.textMain}>{edu.institution} | {formatDate(edu.startDate, lang)}</Text>
-           </View>
-        ))}
+        {data.education && data.education.length > 0 && (
+          <>
+            <Text style={styles.sectionTitleMain}>{t.education}</Text>
+            {data.education.map((edu, i) => (
+              <View key={i} style={{ marginBottom: 8 }} wrap={false}>
+                <Text style={{ fontWeight: 700, fontSize: 11 }}>{edu.degree}</Text>
+                <Text style={styles.textMain}>{edu.institution} | {formatDate(edu.startDate, lang)}</Text>
+              </View>
+            ))}
+          </>
+        )}
 
+        {/* PROYECTOS */}
         {data.projects && data.projects.length > 0 && (
           <>
             <Text style={styles.sectionTitleMain}>{t.projects}</Text>
@@ -180,7 +187,7 @@ const ModernLayout = ({ data, t, lang }) => {
                 {proj.tech_stack && (
                   <Text style={styles.company}>{proj.tech_stack.join(' • ')}</Text>
                 )}
-                <Text style={{...styles.textMain, marginTop: 5}}>{proj.description}</Text>
+                <Text style={{...styles.textMain, marginTop: 5}} maxLines={3}>{proj.description}</Text>
               </View>
             ))}
           </>
@@ -194,7 +201,7 @@ const ModernLayout = ({ data, t, lang }) => {
 const ClassicLayout = ({ data, t, lang }) => {
   const styles = StyleSheet.create({
     page: { padding: 30, fontFamily: 'Merriweather', fontSize: 10, lineHeight: 1.3 }, 
-    header: { textAlign: 'center', marginBottom: 12, borderBottom: '1px solid #000', paddingBottom: 12 },
+    header: { textAlign: 'center', marginBottom: 15, borderBottom: '1px solid #000', paddingBottom: 12 },
     name: { fontSize: 22, fontWeight: 700, marginBottom: 8, textTransform: 'uppercase' },
     contactInfo: { flexDirection: 'row', justifyContent: 'center', gap: 10, fontSize: 9 }, 
     sectionTitle: { fontSize: 12, fontWeight: 700, borderBottom: '1px solid #ccc', marginTop: 10, marginBottom: 6, textTransform: 'uppercase', paddingBottom: 2 }, 
@@ -220,30 +227,41 @@ const ClassicLayout = ({ data, t, lang }) => {
       </View>
 
       <Text style={styles.sectionTitle}>{t.profile}</Text>
-      <Text style={{ marginBottom: 10, textAlign: 'justify' }}>{data.profile.summary}</Text>
+      <Text style={{ marginBottom: 10, textAlign: 'justify' }} maxLines={4}>{data.profile.summary}</Text>
 
-      <Text style={styles.sectionTitle}>{t.experience}</Text>
-      {data.experience?.map((exp, i) => (
-        <View key={i} style={styles.jobBlock} wrap={false}>
-          <View style={styles.jobRow}>
-            <View>
-                <Text style={styles.jobTitle}>{exp.jobTitle}</Text>
-                <Text style={styles.company}>{exp.company}</Text>
+      {/* RENDERIZADO CONDICIONAL DE EXPERIENCIA */}
+      {data.experience && data.experience.length > 0 && (
+        <>
+          <Text style={styles.sectionTitle}>{t.experience}</Text>
+          {data.experience.map((exp, i) => (
+            <View key={i} style={styles.jobBlock} wrap={false}>
+              <View style={styles.jobRow}>
+                <View>
+                    <Text style={styles.jobTitle}>{exp.jobTitle}</Text>
+                    <Text style={styles.company}>{exp.company}</Text>
+                </View>
+                <Text style={styles.date}>{formatDate(exp.startDate, lang)} — {exp.current ? t.present : formatDate(exp.endDate, lang)}</Text>
+              </View>
+              <Text style={{ fontSize: 10, textAlign: 'justify' }} maxLines={3}>{exp.description}</Text>
             </View>
-            <Text style={styles.date}>{formatDate(exp.startDate, lang)} — {exp.current ? t.present : formatDate(exp.endDate, lang)}</Text>
-          </View>
-          <Text style={{ fontSize: 10, textAlign: 'justify' }}>{exp.description}</Text>
-        </View>
-      ))}
+          ))}
+        </>
+      )}
 
-      <Text style={styles.sectionTitle}>{t.education}</Text>
-      {data.education?.map((edu, i) => (
-          <View key={i} style={styles.jobRow} wrap={false}>
-              <Text style={{ fontWeight: 700 }}>{edu.degree}, {edu.institution}</Text>
-              <Text style={styles.date}>{formatDate(edu.startDate, lang)}</Text>
-          </View>
-      ))}
+      {/* RENDERIZADO CONDICIONAL DE EDUCACIÓN */}
+      {data.education && data.education.length > 0 && (
+        <>
+          <Text style={styles.sectionTitle}>{t.education}</Text>
+          {data.education.map((edu, i) => (
+              <View key={i} style={styles.jobRow} wrap={false}>
+                  <Text style={{ fontWeight: 700 }}>{edu.degree}, {edu.institution}</Text>
+                  <Text style={styles.date}>{formatDate(edu.startDate, lang)}</Text>
+              </View>
+          ))}
+        </>
+      )}
 
+      {/* PROYECTOS */}
       {data.projects && data.projects.length > 0 && (
         <>
           <Text style={styles.sectionTitle}>{t.projects}</Text>
@@ -258,7 +276,7 @@ const ClassicLayout = ({ data, t, lang }) => {
                   <Text style={styles.date}>{proj.tech_stack.join(' • ')}</Text>
                 )}
               </View>
-              <Text style={{ fontSize: 10, textAlign: 'justify' }}>{proj.description}</Text>
+              <Text style={{ fontSize: 10, textAlign: 'justify' }} maxLines={3}>{proj.description}</Text>
             </View>
           ))}
         </>
@@ -301,16 +319,37 @@ const CreativeLayout = ({ data, t, lang }) => {
         <View style={styles.contentContainer}>
           <View style={styles.leftCol}>
             <Text style={styles.sectionTitle}>{t.aboutMe}</Text>
-            <Text style={{...styles.text, marginBottom: 20}}>{data.profile.summary}</Text>
+            <Text style={{...styles.text, marginBottom: 20}} maxLines={4}>{data.profile.summary}</Text>
   
-            <Text style={styles.sectionTitle}>{t.experience}</Text>
-            {data.experience?.map((exp, i) => (
-              <View key={i} style={{ marginBottom: 20 }} wrap={false}>
-                <Text style={styles.itemTitle}>{exp.jobTitle}</Text>
-                <Text style={{ fontSize: 10, color: '#9CA3AF', marginBottom: 4 }}>{exp.company} | {formatDate(exp.startDate, lang)} - {exp.current ? t.present : formatDate(exp.endDate, lang)}</Text>
-                <Text style={styles.text}>{exp.description}</Text>
-              </View>
-            ))}
+            {/* RENDERIZADO CONDICIONAL DE EXPERIENCIA */}
+            {data.experience && data.experience.length > 0 && (
+              <>
+                <Text style={styles.sectionTitle}>{t.experience}</Text>
+                {data.experience.map((exp, i) => (
+                  <View key={i} style={{ marginBottom: 15 }} wrap={false}>
+                    <Text style={styles.itemTitle}>{exp.jobTitle}</Text>
+                    <Text style={{ fontSize: 10, color: '#9CA3AF', marginBottom: 4 }}>{exp.company} | {formatDate(exp.startDate, lang)} - {exp.current ? t.present : formatDate(exp.endDate, lang)}</Text>
+                    <Text style={styles.text} maxLines={3}>{exp.description}</Text>
+                  </View>
+                ))}
+              </>
+            )}
+
+            {/* PROYECTOS MOVIDOS A LA COLUMNA PRINCIPAL (IZQUIERDA) */}
+            {data.projects && data.projects.length > 0 && (
+              <>
+                <Text style={styles.sectionTitle}>{t.projects}</Text>
+                {data.projects.map((proj, i) => (
+                  <View key={i} style={{ marginBottom: 15 }} wrap={false}>
+                    <Text style={styles.itemTitle}>{proj.title}</Text>
+                    <Text style={{ fontSize: 10, color: '#9CA3AF', marginBottom: 4 }}>
+                      {proj.role} {proj.tech_stack && proj.tech_stack.length > 0 ? `| ${proj.tech_stack.join(', ')}` : ''}
+                    </Text>
+                    <Text style={styles.text} maxLines={3}>{proj.description}</Text>
+                  </View>
+                ))}
+              </>
+            )}
           </View>
   
           <View style={styles.rightCol}>
@@ -321,26 +360,14 @@ const CreativeLayout = ({ data, t, lang }) => {
                 ))}
             </View>
   
-            <Text style={styles.sectionTitle}>{t.education}</Text>
-            {data.education?.map((edu, i) => (
-                <View key={i} style={{ marginBottom: 10 }}>
-                    <Text style={styles.itemTitle}>{edu.degree}</Text>
-                    <Text style={styles.text}>{edu.institution}</Text>
-                </View>
-            ))}
-
-            {/* NUEVA SECCIÓN: PROYECTOS (Creative) */}
-            {data.projects && data.projects.length > 0 && (
+            {data.education && data.education.length > 0 && (
               <>
-                <Text style={styles.sectionTitle}>{t.projects}</Text>
-                {data.projects.map((proj, i) => (
-                  <View key={i} style={{ marginBottom: 20 }} wrap={false}>
-                    <Text style={styles.itemTitle}>{proj.title}</Text>
-                    <Text style={{ fontSize: 10, color: '#9CA3AF', marginBottom: 4 }}>
-                      {proj.role} {proj.tech_stack && proj.tech_stack.length > 0 ? `| ${proj.tech_stack.join(', ')}` : ''}
-                    </Text>
-                    <Text style={styles.text}>{proj.description}</Text>
-                  </View>
+                <Text style={styles.sectionTitle}>{t.education}</Text>
+                {data.education.map((edu, i) => (
+                    <View key={i} style={{ marginBottom: 10 }}>
+                        <Text style={styles.itemTitle}>{edu.degree}</Text>
+                        <Text style={styles.text}>{edu.institution}</Text>
+                    </View>
                 ))}
               </>
             )}
@@ -354,15 +381,37 @@ const CreativeLayout = ({ data, t, lang }) => {
 // 5. COMPONENTE PRINCIPAL (ADAPTER + RENDER)
 // ==========================================
 
-// AÑADIMOS 'language' CON VALOR 'es' POR DEFECTO
 export const CVDocument = ({ data, template = 'modern', language = 'es' }) => {
   
-  // Obtenemos el diccionario del idioma activo
   const t = TRANSLATIONS[language] || TRANSLATIONS['es'];
-
-  // A. ADAPTER: Normalizamos los datos (Backend -> Frontend)
   const source = data?.structured_cv_data ? data.structured_cv_data : (data || {});
   
+  // PARSEO DE EXPERIENCIA
+  const parsedExperience = (source.experience || []).slice(0, 3).map(exp => {
+    const { startDate, endDate, current } = parseDateRange(exp.date_range);
+    let description = '';
+    if (Array.isArray(exp.enhanced_description)) {
+      description = exp.enhanced_description.join('\n• ');
+      if (description) description = '• ' + description; 
+    } else {
+      description = exp.enhanced_description || exp.description || '';
+    }
+
+    return {
+      jobTitle: exp.position, 
+      company: exp.company,
+      startDate: startDate,
+      endDate: endDate,
+      current: current,
+      location: exp.location,
+      description: description,
+    };
+  });
+
+  // LOGICA DINÁMICA: Si no hay experiencia, permitimos más proyectos (hasta 4)
+  const hasExperience = parsedExperience.length > 0;
+  const maxProjects = hasExperience ? 2 : 4;
+
   const mappedData = {
     profile: {
       firstName: source.profile?.firstName || '',
@@ -376,26 +425,7 @@ export const CVDocument = ({ data, template = 'modern', language = 'es' }) => {
     },
     job_title_target: source.job_title_target || data?.job_title_extracted || '',
     
-    experience: (source.experience || []).slice(0, 3).map(exp => {
-      const { startDate, endDate, current } = parseDateRange(exp.date_range);
-      let description = '';
-      if (Array.isArray(exp.enhanced_description)) {
-        description = exp.enhanced_description.join('\n• ');
-        if (description) description = '• ' + description; 
-      } else {
-        description = exp.enhanced_description || exp.description || '';
-      }
-
-      return {
-        jobTitle: exp.position, 
-        company: exp.company,
-        startDate: startDate,
-        endDate: endDate,
-        current: current,
-        location: exp.location,
-        description: description,
-      };
-    }),
+    experience: parsedExperience, // Array procesado anteriormente
 
     education: (source.education || []).slice(0, 2).map(edu => {
       const { startDate, endDate } = parseDateRange(edu.date_range);
@@ -407,7 +437,8 @@ export const CVDocument = ({ data, template = 'modern', language = 'es' }) => {
       };
     }),
 
-    projects: (source.projects || []).slice(0, 2),
+    // Se adapta dinámicamente si no hay experiencia
+    projects: (source.projects || []).slice(0, maxProjects),
 
     skills: {
       technical: (source.selected_skills || source.skills?.technical || []).slice(0, 10),
@@ -417,7 +448,6 @@ export const CVDocument = ({ data, template = 'modern', language = 'es' }) => {
     languages: (source.selected_languages || source.languages || []).slice(0, 3)
   };
 
-  // B. RENDERIZADO: Pasamos t (traducciones) y lang (idioma para las fechas) a los Layouts
   return (
     <Document>
       {template === 'modern' && <ModernLayout data={mappedData} t={t} lang={language} />}
