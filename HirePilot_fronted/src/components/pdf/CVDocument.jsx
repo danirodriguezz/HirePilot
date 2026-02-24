@@ -29,6 +29,7 @@ const TRANSLATIONS = {
     skills: 'Habilidades',
     languages: 'Idiomas',
     experience: 'Experiencia Laboral',
+    projects: 'Proyectos Destacados',
     education: 'Educación',
     present: 'Presente',
     profile: 'Perfil Profesional',
@@ -41,6 +42,7 @@ const TRANSLATIONS = {
     languages: 'Languages',
     experience: 'Work Experience',
     education: 'Education',
+    projects: 'Featured Projects',
     present: 'Present',
     profile: 'Professional Profile',
     aboutMe: 'About Me',
@@ -52,6 +54,7 @@ const TRANSLATIONS = {
     languages: 'Langues',
     experience: 'Expérience Professionnelle',
     education: 'Éducation',
+    projects: 'Projets Remarquables',
     present: 'Présent',
     profile: 'Profil Professionnel',
     aboutMe: 'À propos de moi',
@@ -100,18 +103,18 @@ const parseDateRange = (dateRangeString) => {
 const ModernLayout = ({ data, t, lang }) => {
   const styles = StyleSheet.create({
     page: { flexDirection: 'row', fontFamily: 'Roboto' },
-    sidebar: { width: '35%', backgroundColor: '#1F2937', padding: 20, color: 'white', height: '100%' },
-    main: { width: '65%', padding: 20 },
-    name: { fontSize: 24, fontWeight: 700, marginBottom: 5, color: '#10B981' },
-    role: { fontSize: 14, marginBottom: 20, color: '#D1D5DB' },
-    sectionTitleSidebar: { fontSize: 12, fontWeight: 700, borderBottom: '1px solid #4B5563', paddingBottom: 5, marginBottom: 10, marginTop: 15, textTransform: 'uppercase', color: '#10B981' },
-    sectionTitleMain: { fontSize: 16, fontWeight: 700, borderBottom: '2px solid #E5E7EB', paddingBottom: 5, marginBottom: 15, color: '#111827', textTransform: 'uppercase' },
-    textSidebar: { fontSize: 10, marginBottom: 5, color: '#E5E7EB' },
-    textMain: { fontSize: 11, marginBottom: 5, color: '#374151', lineHeight: 1.4 },
+    sidebar: { width: '35%', backgroundColor: '#1F2937', padding: 15, color: 'white', height: '100%' },
+    main: { width: '65%', padding: 15 },
+    name: { fontSize: 22, fontWeight: 700, marginBottom: 3, color: '#10B981' },
+    role: { fontSize: 12, marginBottom: 12, color: '#D1D5DB' }, 
+    sectionTitleSidebar: { fontSize: 11, fontWeight: 700, borderBottom: '1px solid #4B5563', paddingBottom: 4, marginBottom: 8, marginTop: 12, textTransform: 'uppercase', color: '#10B981' },
+    sectionTitleMain: { fontSize: 14, fontWeight: 700, borderBottom: '2px solid #E5E7EB', paddingBottom: 4, marginBottom: 10, color: '#111827', textTransform: 'uppercase' },
+    textSidebar: { fontSize: 10, marginBottom: 4, color: '#E5E7EB' },
+    textMain: { fontSize: 10, marginBottom: 3, color: '#374151', lineHeight: 1.3 },
     jobHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 },
-    jobTitle: { fontWeight: 700, fontSize: 12 },
-    company: { fontStyle: 'italic', fontSize: 11 },
-    date: { fontSize: 10, color: '#6B7280' },
+    jobTitle: { fontWeight: 700, fontSize: 11 }, 
+    company: { fontStyle: 'italic', fontSize: 10 },
+    date: { fontSize: 9, color: '#6B7280' },
   });
 
   return (
@@ -147,7 +150,7 @@ const ModernLayout = ({ data, t, lang }) => {
 
         <Text style={styles.sectionTitleMain}>{t.experience}</Text>
         {data.experience?.map((exp, i) => (
-          <View key={i} style={{ marginBottom: 15 }} wrap={false}>
+          <View key={i} style={{ marginBottom: 10 }} wrap={false}>
             <View style={styles.jobHeader}>
               <Text style={styles.jobTitle}>{exp.jobTitle}</Text>
               <Text style={styles.date}>{formatDate(exp.startDate, lang)} - {exp.current ? t.present : formatDate(exp.endDate, lang)}</Text>
@@ -164,6 +167,24 @@ const ModernLayout = ({ data, t, lang }) => {
              <Text style={styles.textMain}>{edu.institution} | {formatDate(edu.startDate, lang)}</Text>
            </View>
         ))}
+
+        {data.projects && data.projects.length > 0 && (
+          <>
+            <Text style={styles.sectionTitleMain}>{t.projects}</Text>
+            {data.projects.map((proj, i) => (
+              <View key={i} style={{ marginBottom: 15 }} wrap={false}>
+                <View style={styles.jobHeader}>
+                  <Text style={styles.jobTitle}>{proj.title}</Text>
+                  <Text style={styles.date}>{proj.role}</Text>
+                </View>
+                {proj.tech_stack && (
+                  <Text style={styles.company}>{proj.tech_stack.join(' • ')}</Text>
+                )}
+                <Text style={{...styles.textMain, marginTop: 5}}>{proj.description}</Text>
+              </View>
+            ))}
+          </>
+        )}
       </View>
     </Page>
   );
@@ -172,16 +193,16 @@ const ModernLayout = ({ data, t, lang }) => {
 // --- TEMPLATE 2: CLÁSICO ---
 const ClassicLayout = ({ data, t, lang }) => {
   const styles = StyleSheet.create({
-    page: { padding: 40, fontFamily: 'Merriweather', fontSize: 11, lineHeight: 1.5 },
-    header: { textAlign: 'center', marginBottom: 20, borderBottom: '1px solid #000', paddingBottom: 20 },
-    name: { fontSize: 24, fontWeight: 700, marginBottom: 8, textTransform: 'uppercase' },
-    contactInfo: { flexDirection: 'row', justifyContent: 'center', gap: 15, fontSize: 10 },
-    sectionTitle: { fontSize: 14, fontWeight: 700, borderBottom: '1px solid #ccc', marginTop: 15, marginBottom: 10, textTransform: 'uppercase', paddingBottom: 2 },
-    jobBlock: { marginBottom: 15 },
-    jobRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 3 },
-    jobTitle: { fontSize: 12, fontWeight: 700 },
-    company: { fontSize: 11, fontStyle: 'italic' },
-    date: { fontSize: 10 },
+    page: { padding: 30, fontFamily: 'Merriweather', fontSize: 10, lineHeight: 1.3 }, 
+    header: { textAlign: 'center', marginBottom: 12, borderBottom: '1px solid #000', paddingBottom: 12 },
+    name: { fontSize: 22, fontWeight: 700, marginBottom: 8, textTransform: 'uppercase' },
+    contactInfo: { flexDirection: 'row', justifyContent: 'center', gap: 10, fontSize: 9 }, 
+    sectionTitle: { fontSize: 12, fontWeight: 700, borderBottom: '1px solid #ccc', marginTop: 10, marginBottom: 6, textTransform: 'uppercase', paddingBottom: 2 }, 
+    jobBlock: { marginBottom: 10 }, 
+    jobRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 2 },
+    jobTitle: { fontSize: 11, fontWeight: 700 }, 
+    company: { fontSize: 10, fontStyle: 'italic' }, 
+    date: { fontSize: 9 }, 
   });
 
   return (
@@ -222,6 +243,26 @@ const ClassicLayout = ({ data, t, lang }) => {
               <Text style={styles.date}>{formatDate(edu.startDate, lang)}</Text>
           </View>
       ))}
+
+      {data.projects && data.projects.length > 0 && (
+        <>
+          <Text style={styles.sectionTitle}>{t.projects}</Text>
+          {data.projects.map((proj, i) => (
+            <View key={i} style={styles.jobBlock} wrap={false}>
+              <View style={styles.jobRow}>
+                <View>
+                    <Text style={styles.jobTitle}>{proj.title}</Text>
+                    <Text style={styles.company}>{proj.role}</Text>
+                </View>
+                {proj.tech_stack && (
+                  <Text style={styles.date}>{proj.tech_stack.join(' • ')}</Text>
+                )}
+              </View>
+              <Text style={{ fontSize: 10, textAlign: 'justify' }}>{proj.description}</Text>
+            </View>
+          ))}
+        </>
+      )}
       
       <Text style={styles.sectionTitle}>{t.competences}</Text>
       <Text style={{ fontSize: 10 }}>{data.skills?.technical?.join(' • ')}</Text>
@@ -233,16 +274,16 @@ const ClassicLayout = ({ data, t, lang }) => {
 const CreativeLayout = ({ data, t, lang }) => {
     const styles = StyleSheet.create({
       page: { fontFamily: 'Lato', backgroundColor: '#F9FAFB' },
-      header: { backgroundColor: '#3B82F6', padding: 30, color: 'white' },
-      name: { fontSize: 30, fontWeight: 900 },
-      role: { fontSize: 16, marginTop: 5, opacity: 0.9 },
-      contentContainer: { flexDirection: 'row', padding: 30 },
-      leftCol: { width: '65%', paddingRight: 20 },
-      rightCol: { width: '35%', paddingLeft: 20, borderLeft: '1px solid #E5E7EB' },
-      sectionTitle: { fontSize: 14, fontWeight: 700, color: '#3B82F6', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 },
-      text: { fontSize: 10, color: '#4B5563', marginBottom: 5, lineHeight: 1.4 },
+      header: { backgroundColor: '#3B82F6', padding: 20, color: 'white' },
+      name: { fontSize: 26, fontWeight: 900 },
+      role: { fontSize: 13, marginTop: 4, opacity: 0.9 },
+      contentContainer: { flexDirection: 'row', padding: 20 },
+      leftCol: { width: '65%', paddingRight: 15 },
+      rightCol: { width: '35%', paddingLeft: 15, borderLeft: '1px solid #E5E7EB' },
+      sectionTitle: { fontSize: 12, fontWeight: 700, color: '#3B82F6', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 },
+      text: { fontSize: 10, color: '#4B5563', marginBottom: 3, lineHeight: 1.3 },
       itemTitle: { fontSize: 11, fontWeight: 700, color: '#111827' },
-      tag: { backgroundColor: '#DBEAFE', color: '#1E40AF', fontSize: 9, padding: '4 8', borderRadius: 10, alignSelf: 'flex-start', marginBottom: 4, marginRight: 4 }
+      tag: { backgroundColor: '#DBEAFE', color: '#1E40AF', fontSize: 8, padding: '3 6', borderRadius: 8, alignSelf: 'flex-start', marginBottom: 4, marginRight: 4 }
     });
   
     return (
@@ -287,6 +328,22 @@ const CreativeLayout = ({ data, t, lang }) => {
                     <Text style={styles.text}>{edu.institution}</Text>
                 </View>
             ))}
+
+            {/* NUEVA SECCIÓN: PROYECTOS (Creative) */}
+            {data.projects && data.projects.length > 0 && (
+              <>
+                <Text style={styles.sectionTitle}>{t.projects}</Text>
+                {data.projects.map((proj, i) => (
+                  <View key={i} style={{ marginBottom: 20 }} wrap={false}>
+                    <Text style={styles.itemTitle}>{proj.title}</Text>
+                    <Text style={{ fontSize: 10, color: '#9CA3AF', marginBottom: 4 }}>
+                      {proj.role} {proj.tech_stack && proj.tech_stack.length > 0 ? `| ${proj.tech_stack.join(', ')}` : ''}
+                    </Text>
+                    <Text style={styles.text}>{proj.description}</Text>
+                  </View>
+                ))}
+              </>
+            )}
           </View>
         </View>
       </Page>
@@ -319,7 +376,7 @@ export const CVDocument = ({ data, template = 'modern', language = 'es' }) => {
     },
     job_title_target: source.job_title_target || data?.job_title_extracted || '',
     
-    experience: (source.experience || []).map(exp => {
+    experience: (source.experience || []).slice(0, 3).map(exp => {
       const { startDate, endDate, current } = parseDateRange(exp.date_range);
       let description = '';
       if (Array.isArray(exp.enhanced_description)) {
@@ -340,7 +397,7 @@ export const CVDocument = ({ data, template = 'modern', language = 'es' }) => {
       };
     }),
 
-    education: (source.education || []).map(edu => {
+    education: (source.education || []).slice(0, 2).map(edu => {
       const { startDate, endDate } = parseDateRange(edu.date_range);
       return {
         degree: edu.degree,
@@ -350,12 +407,14 @@ export const CVDocument = ({ data, template = 'modern', language = 'es' }) => {
       };
     }),
 
+    projects: (source.projects || []).slice(0, 2),
+
     skills: {
-      technical: source.selected_skills || source.skills?.technical || [],
+      technical: (source.selected_skills || source.skills?.technical || []).slice(0, 10),
       soft: source.soft_skills || []
     },
 
-    languages: source.selected_languages || source.languages || []
+    languages: (source.selected_languages || source.languages || []).slice(0, 3)
   };
 
   // B. RENDERIZADO: Pasamos t (traducciones) y lang (idioma para las fechas) a los Layouts
