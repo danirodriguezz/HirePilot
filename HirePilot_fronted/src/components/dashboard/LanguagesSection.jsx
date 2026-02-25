@@ -72,7 +72,14 @@ const LanguagesSection = ({data, onUpdate}) => {
 
     const deleteAction = async () => {
       if (!isTemp) await languageService.delete(id)
-      setLanguages(prev => prev.filter(l => l.id !== id))
+
+      const newList = languages.filter(l => l.id !== id)
+      
+      // 3. Actualizamos el estado local
+      setLanguages(newList)
+      
+      // 4. Notificamos al Dashboard (estado global)
+      onUpdate(newList) 
     }
 
     if (isTemp) {

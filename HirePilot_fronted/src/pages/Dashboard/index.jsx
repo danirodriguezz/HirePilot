@@ -128,7 +128,7 @@ const Dashboard = () => {
     }))
   }
 
-  const handleLenguageUpdate = (updatedLanguageList) => {
+  const handleLanguageUpdate = (updatedLanguageList) => {
     setUserData(prev => ({
       ...prev,
       languages: updatedLanguageList
@@ -246,7 +246,7 @@ const Dashboard = () => {
           <CertificatesSection data={userData.certificates} onUpdate={handleCertificateUpdate} />
         )
       case "languages":
-        return <LanguagesSection data={userData.languages} onUpdate={handleLenguageUpdate} />
+        return <LanguagesSection data={userData.languages} onUpdate={handleLanguageUpdate} />
       case "skills":
         return <SkillsSection data={userData.skills} onUpdate={handleSkillUpdate} />
       case "projects":
