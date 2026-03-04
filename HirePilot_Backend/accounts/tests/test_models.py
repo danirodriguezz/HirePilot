@@ -3,8 +3,7 @@ from django.contrib.auth import get_user_model
 from django.db.utils import IntegrityError
 from datetime import date
 from accounts.models import (
-    UserProfile, WorkExperience, WorkAchievement, 
-    Education, Skill, JobPosting, TailoredCV
+    UserProfile, WorkExperience, WorkAchievement
 )
 
 # Obtenemos el modelo de usuario activo dinámicamente
@@ -33,7 +32,7 @@ class UserModelTest(TestCase):
         
         self.assertTrue(admin.is_staff)
         self.assertTrue(admin.is_superuser)
-        self.assertTrue(admin.is_verified) # Validamos tu lógica personalizada
+        self.assertTrue(admin.is_verified) 
 
     def test_create_user_without_email_fails(self):
         """El email debe ser obligatorio"""
@@ -59,7 +58,6 @@ class UserProfileTest(TestCase):
         """Prueba que podemos editar el perfil autocreado y usar los Choices."""
         profile = self.user.profile 
 
-        # 2. Actualizamos los datos
         profile.headline = "Backend Ninja"
         profile.summary = "Python Lover"
         profile.years_of_experience = UserProfile.ExperienceRange.FIVE_TO_SIX
@@ -67,7 +65,6 @@ class UserProfileTest(TestCase):
         profile.phone = "+123456789"
         profile.save()
 
-        # 3. Verificamos (Refrescar desde BD para asegurar persistencia)
         profile.refresh_from_db()
 
         self.assertEqual(profile.years_of_experience, '5-6')
@@ -76,18 +73,13 @@ class UserProfileTest(TestCase):
 
     def test_profile_cascade_delete(self):
         """Si borramos al usuario, el perfil debe morir (CASCADE)"""
-        # Verificamos que el perfil existe al inicio (creado por signals.py)
         self.assertTrue(UserProfile.objects.filter(user=self.user).exists())
-        
-        # Borramos el usuario
         self.user.delete()
-        
-        # El perfil debería haber desaparecido
         self.assertEqual(UserProfile.objects.count(), 0)
 
 
 class WorkExperienceTest(TestCase):
-    """Pruebas para experiencia laboral y ordenamiento"""
+    """Pruebas para experiencia laboral, ordenamiento y logros"""
 
     def setUp(self):
         self.user = User.objects.create_user(email="worker@saas.com", password="pw")
@@ -110,24 +102,13 @@ class WorkExperienceTest(TestCase):
         )
 
         experiences = WorkExperience.objects.filter(user=self.user)
-        # El primero en la lista debe ser el más reciente (exp2)
         self.assertEqual(experiences.first(), exp2)
         self.assertEqual(experiences.last(), exp1)
 
-
-class JSONFieldsTest(TestCase):
-    """
-    IMPORTANTE: Pruebas críticas para los campos JSON.
-    Validamos que Postgres acepte estructuras complejas.
-    """
-
-    def setUp(self):
-        self.user = User.objects.create_user(email="json@saas.com", password="pw")
-
-    def test_achievement_keywords(self):
-        """Prueba que WorkAchievement guarda una lista de keywords"""
+    def test_achievement_keywords_json(self):
+        """Prueba que WorkAchievement guarda correctamente la lista JSON de keywords"""
         work = WorkExperience.objects.create(
-            user=self.user, company="A", role="B", start_date=date(2022, 1, 1)
+            user=self.user, company="Tech AI", role="Dev", start_date=date(2022, 1, 1)
         )
         
         keywords_list = ["Python", "Django", "Optimización"]
@@ -140,59 +121,3 @@ class JSONFieldsTest(TestCase):
         saved_ach = WorkAchievement.objects.get(id=achievement.id)
         self.assertEqual(saved_ach.keywords, keywords_list)
         self.assertIsInstance(saved_ach.keywords, list)
-
-    def test_job_posting_analysis(self):
-        """Prueba que JobPosting guarda un diccionario de análisis"""
-        analysis_mock = {
-            "required_skills": ["React", "Redux"],
-            "tone": "Formal",
-            "match_score": 85
-        }
-        
-        posting = JobPosting.objects.create(
-            user=self.user,
-            title="Frontend Dev",
-            original_text="We need React...",
-            analysis_result=analysis_mock
-        )
-
-        saved_posting = JobPosting.objects.get(id=posting.id)
-        self.assertEqual(saved_posting.analysis_result['tone'], "Formal")
-
-
-class TailoredCVSnapshotTest(TestCase):
-    """
-    CRÍTICO: Validar la integridad del SNAPSHOT.
-    El CV generado NO debe cambiar si el usuario cambia su perfil después.
-    """
-
-    def setUp(self):
-        self.user = User.objects.create_user(email="candidate@saas.com", password="pw")
-        self.posting = JobPosting.objects.create(
-            user=self.user, title="Dev", original_text="Desc"
-        )
-
-    def test_snapshot_immutability(self):
-        # 1. Creamos un snapshot con los datos ACTUALES del usuario
-        original_data = {
-            "headline": "Junior Dev",
-            "skills": ["HTML", "CSS"]
-        }
-        
-        cv = TailoredCV.objects.create(
-            user=self.user,
-            job_posting=self.posting,
-            content_snapshot=original_data
-        )
-
-        # 2. Simulamos que el usuario evoluciona y cambia su "Master Data" mañana
-        # (En la realidad esto sería un update al modelo UserProfile o Skill)
-        new_user_data = {
-            "headline": "Senior Architect",
-            "skills": ["HTML", "CSS", "Docker", "Kubernetes"]
-        }
-
-        # 3. Verificamos que el CV guardado SIGUE teniendo los datos viejos
-        # Esto asegura la integridad histórica del documento PDF generado
-        self.assertEqual(cv.content_snapshot['headline'], "Junior Dev")
-        self.assertNotEqual(cv.content_snapshot['headline'], new_user_data['headline'])

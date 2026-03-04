@@ -11,11 +11,11 @@ class TestCVGeneratorService:
         Verifica que _gather_user_data extraiga y formatee correctamente
         toda la información de los modelos relacionales.
         """
-        service = CVGeneratorService(user=full_user_profile, job_description="test")
+        service = CVGeneratorService(user=full_user_profile, job_description="test", language="es")
         data = service._gather_user_data()
 
-        # Verificaciones clave
-        assert data['personal_info']['full_name'] == "Juan Perez"
+        assert data['personal_info']['firstName'] == "Juan"
+        assert data['personal_info']['lastName'] == "Perez"
         assert data['personal_info']['email'] == "test@example.com"
         assert len(data['experience']) == 1
         assert data['experience'][0]['company'] == "Tech Corp"
@@ -28,13 +28,13 @@ class TestCVGeneratorService:
     def test_generate_cv_success_flow(self, mock_openai_class, full_user_profile):
         """
         Prueba el flujo feliz: Tenemos API Key, llamamos a OpenAI
-        y recibimos un JSON válido.
+        y recibimos un JSON válido fusionado con los datos del perfil.
         """
         # 1. Configurar el Mock de la respuesta de OpenAI
         mock_client = MagicMock()
         mock_openai_class.return_value = mock_client
         
-        expected_json = {
+        expected_ai_json = {
             "job_title_target": "Senior Python Dev",
             "profile_summary": "Experto en Django",
             "selected_skills": ["Python", "Django"],
@@ -47,16 +47,21 @@ class TestCVGeneratorService:
         
         # Simulamos la estructura anidada de la respuesta de OpenAI
         mock_completion = MagicMock()
-        mock_completion.choices[0].message.content = json.dumps(expected_json)
+        mock_completion.choices[0].message.content = json.dumps(expected_ai_json)
         mock_client.chat.completions.create.return_value = mock_completion
 
         # 2. Ejecutar servicio
-        service = CVGeneratorService(user=full_user_profile, job_description="Need Python Dev")
+        service = CVGeneratorService(user=full_user_profile, job_description="Need Python Dev", language="es")
         result = service.generate_cv()
 
         # 3. Asserts
-        assert result == expected_json
-        assert result['job_title_target'] == "Senior Python Dev"
+        assert 'profile' in result
+        assert result['profile']['email'] == full_user_profile.email
+        
+        # Y validar que el resto de datos coinciden con lo que "devolvió" OpenAI
+        assert result['job_title_target'] == expected_ai_json['job_title_target']
+        assert result['profile_summary'] == expected_ai_json['profile_summary']
+        
         # Verificar que se llamó a la API con los mensajes correctos
         mock_client.chat.completions.create.assert_called_once()
 
@@ -65,7 +70,8 @@ class TestCVGeneratorService:
         """
         Si no hay API KEY, debe retornar el Mock interno sin romper la app.
         """
-        service = CVGeneratorService(user=full_user_profile, job_description="Cualquier cosa")
+        
+        service = CVGeneratorService(user=full_user_profile, job_description="Cualquier cosa", language="es")
         result = service.generate_cv()
 
         assert result['job_title_target'] == "Puesto Objetivo (Mock)"
@@ -84,7 +90,7 @@ class TestCVGeneratorService:
         # Hacemos que la llamada explote
         mock_client.chat.completions.create.side_effect = Exception("OpenAI is down")
 
-        service = CVGeneratorService(user=full_user_profile, job_description="Test")
+        service = CVGeneratorService(user=full_user_profile, job_description="Test", language="es")
         result = service.generate_cv()
 
         # Debe haber hecho fallback al mock
