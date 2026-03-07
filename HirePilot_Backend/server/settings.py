@@ -109,12 +109,12 @@ WSGI_APPLICATION = 'server.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'cv_generator_db',      # Coincide con POSTGRES_DB
-        'USER': 'postgres',             # Coincide con POSTGRES_USER
-        'PASSWORD': 'postgres',         # Coincide con POSTGRES_PASSWORD
-        'HOST': 'localhost',            # IMPORTANTE: Al correr Django localmente, usamos localhost
-        'PORT': '5432',                 # El puerto expuesto en tu docker-compose
+        'ENGINE': os.getenv('DB_ENGINE'),
+        'NAME': os.getenv('DB_NAME'),      
+        'USER': os.getenv('DB_USER'),             
+        'PASSWORD': os.getenv('DB_PASSWORD'),         
+        'HOST': os.getenv('DB_HOST'),         
+        'PORT': os.getenv('DB_PORT'),              
     }
 }
 

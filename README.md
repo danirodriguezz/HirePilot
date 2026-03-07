@@ -98,8 +98,12 @@ OPENAI_API_KEY=tu_openai_api_key
 # ANTHROPIC_API_KEY=tu_anthropic_api_key
 
 
+```
+
 En la carpeta HirePilot_fronted/, crea un archivo .env con:
 
+
+```env
 VITE_API_URL=http://localhost:8000/api
 ```
 
