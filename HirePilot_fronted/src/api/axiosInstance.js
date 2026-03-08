@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // 1. Configuración dinámica basada en entorno
-const baseURL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api";
+const baseURL = import.meta.env.VITE_API_URL;
 
 const api = axios.create({
   baseURL,
