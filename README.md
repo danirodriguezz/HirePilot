@@ -114,8 +114,8 @@ Sigue estos pasos para levantar el entorno de desarrollo en tu máquina.
 ### 1. Clonar el repositorio
 
 ``` bash
-git clone [https://github.com/TU_USUARIO/hirepilot.git](https://github.com/TU_USUARIO/hirepilot.git)
-cd hirepilot
+git clone https://github.com/danirodriguezz/HirePilot.git
+cd HirePilot
 ```
 
 ### 2. Levantar la Base de Datos (PostgreSQL)
@@ -190,26 +190,62 @@ Levanta el servidor de desarrollo:
 ```
 ```Bash
 npm run dev
-El frontend estará disponible en http://localhost:5173.
 ```
+
+El frontend estará disponible en http://localhost:5173.
+
 
 
 ## 📁 Estructura del Proyecto
 ```Plaintext
-hirepilot/
-├── docker-compose.yml       # Configuración de PostgreSQL en Docker
-├── HirePilot_Backend/       # Código fuente del servidor Django / API REST
-│   ├── accounts/            # App de gestión de usuarios y perfiles
-│   ├── cv_generator/        # App core para la lógica de IA y matching
-│   ├── server/              # Configuración principal de Django
-│   ├── manage.py
-│   └── requirements.txt     # Dependencias de Python
-└── HirePilot_fronted/       # Código fuente del cliente React
-    ├── public/              # Assets estáticos y plantillas
-    ├── src/                 # Código fuente
-    │   ├── api/             # Configuración de Axios
-    │   ├── components/      # Componentes UI reutilizables
-    │   ├── pages/           # Vistas principales (Auth, Dashboard, etc.)
-    │   └── services/        # Lógica de llamadas a la API
-    └── package.json         # Dependencias de Node
+HirePilot/
+├── .github/                 # Archivos específicos de GitHub.
+│   └── assets/              # Contiene mockups y capturas de pantalla de la app (móvil y ordenador) usados en la documentación.
+│
+├── HirePilot_Backend/       # Código fuente del backend (Python / Django).
+│   ├── accounts/            # Aplicación para la gestión de usuarios y sus perfiles profesionales.
+│   │   ├── migrations/      # Historial de cambios en la estructura de la base de datos.
+│   │   ├── tests/           # Pruebas automatizadas (unitarias/integración) para la app accounts.
+│   │   ├── models.py        # Define la estructura de datos: User, Education, Experience, Skills, Projects, etc.
+│   │   ├── views.py         # Controladores de la API (Endpoints) para gestionar los perfiles.
+│   │   └── serializers.py   # Reglas de conversión entre la BBDD y el formato JSON de la API.
+│   │
+│   ├── cv_generator/        # Aplicación dedicada a la lógica de generación de CVs.
+│   │   ├── test/            # Pruebas automatizadas del generador de CVs.
+│   │   ├── services.py      # Lógica central del negocio (posiblemente la conexión con IA para adaptar los CVs).
+│   │   └── views.py         # Endpoints para recibir peticiones de creación de currículums.
+│   │
+│   ├── server/              # Configuración global del proyecto Django.
+│   │   ├── settings.py      # Configuraciones generales (BBDD, seguridad, apps instaladas, etc.).
+│   │   └── urls.py          # Enrutador principal de todas las URLs del backend.
+│   │
+│   ├── manage.py            # Script principal de Django para ejecutar comandos (servidor, migraciones, etc.).
+│   ├── pytest.ini           # Configuración de Pytest para la ejecución de pruebas en el backend.
+│   └── requirements.txt     # Listado de dependencias y librerías de Python necesarias.
+│
+├── HirePilot_fronted/       # Código fuente del frontend (React + Vite).
+│   ├── public/              # Archivos estáticos accesibles directamente.
+│   │   └── templates/       # Imágenes de muestra de las plantillas del CV (Classic, Creative, Modern).
+│   │
+│   ├── src/                 # Código fuente principal de la aplicación React.
+│   │   ├── api/             # Configuración del cliente HTTP (instancia de Axios para conectar con el backend).
+│   │   ├── assets/          # Recursos estáticos empaquetados como fuentes tipográficas (Lato, Merriweather, Roboto) e íconos.
+│   │   ├── components/      # Componentes de interfaz reutilizables.
+│   │   │   ├── dashboard/   # Secciones específicas del panel del usuario (Educación, Experiencia, etc.).
+│   │   │   ├── pdf/         # Componentes encargados de renderizar visualmente el CV en formato PDF.
+│   │   │   └── ui/          # Elementos genéricos de interfaz (Modales, Selectores de fecha).
+│   │   ├── data/            # Archivos con datos estáticos locales (como testimonios falsos para la landing page).
+│   │   ├── hooks/           # Custom hooks de React (ej. utilidades para optimizar búsquedas con debounce).
+│   │   ├── pages/           # Vistas completas de la aplicación.
+│   │   │   ├── Auth/        # Páginas relacionadas con la autenticación (Login, Registro, Verificación).
+│   │   │   └── Dashboard/   # Panel de control principal tras iniciar sesión.
+│   │   ├── routes/          # Lógica y definición de las rutas de navegación de la app (React Router).
+│   │   └── services/        # Funciones abstractas para hacer llamadas a la API backend separadas por entidad.
+│   │
+│   ├── index.html           # Punto de entrada HTML de la aplicación frontend.
+│   ├── package.json         # Información del proyecto, dependencias de Node.js y comandos de ejecución.
+│   └── vite.config.js       # Archivo de configuración para Vite (empaquetador y servidor de desarrollo).
+│
+├── docker-compose.yml       # Archivo de orquestación de Docker. Permite levantar todo el entorno (Frontend, Backend y BBDD) con un solo comando.
+└── README.md                # Archivo principal de documentación del repositorio.
 ```
