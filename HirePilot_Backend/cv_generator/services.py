@@ -114,7 +114,8 @@ class CVGeneratorService:
                     "title": "String",
                     "role": "String",
                     "description": "Breve descripción adaptada a la oferta",
-                    "tech_stack": ["Tech1", "Tech2"]
+                    "tech_stack": ["Tech1", "Tech2"],
+                    "url": "Aquí debes mantener el link original del proyecto (si existe) sin inventar nuevos links"
                 }
             ],
             "certificates": [

@@ -108,21 +108,24 @@ const ModernLayout = ({ data, t, lang }) => {
     sectionTitleMain: { fontSize: 14, fontWeight: 700, borderBottom: '2px solid #E5E7EB', paddingBottom: 4, marginBottom: 10, color: '#111827', textTransform: 'uppercase' },
     textSidebar: { fontSize: 10, marginBottom: 4, color: '#E5E7EB' },
     textMain: { fontSize: 10, marginBottom: 3, color: '#374151', lineHeight: 1.3 },
-    jobHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 },
+    jobHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2, alignItems: 'center' },
     jobTitle: { fontWeight: 700, fontSize: 11 }, 
     company: { fontStyle: 'italic', fontSize: 10 },
     date: { fontSize: 9, color: '#6B7280' },
+    // NUEVO: Estilo fusionado para el título si es un enlace (verde esmeralda y subrayado)
+    projectTitleLink: { fontWeight: 700, fontSize: 11, color: '#10B981', textDecoration: 'underline' } 
   });
 
   return (
     <Page size="A4" style={styles.page}>
+      {/* ... [El sidebar se queda exactamente igual] ... */}
       <View style={styles.sidebar}>
         <View style={{ marginBottom: 20 }}>
           <Text style={{ fontSize: 10, color: '#9CA3AF' }}>{t.contact}</Text>
           <Text style={styles.textSidebar}>{data.profile.email}</Text>
           <Text style={styles.textSidebar}>{data.profile.phone}</Text>
           <Text style={styles.textSidebar}>{data.profile.location}</Text>
-          {data.profile.linkedin && <Link src={data.profile.linkedin} style={styles.textSidebar}>LinkedIn</Link>}
+          {data.profile.linkedin && <Link src={data.profile.linkedin} style={{...styles.textSidebar, color: '#10B981', textDecoration: 'none'}}>LinkedIn</Link>}
         </View>
 
         <Text style={styles.sectionTitleSidebar}>{t.skills}</Text>
@@ -145,7 +148,7 @@ const ModernLayout = ({ data, t, lang }) => {
             <Text style={styles.textMain} maxLines={4}>{data.profile.summary}</Text>
         </View>
 
-        {/* RENDERIZADO CONDICIONAL DE EXPERIENCIA */}
+        {/* EXPERIENCIA (Igual) */}
         {data.experience && data.experience.length > 0 && (
           <>
             <Text style={styles.sectionTitleMain}>{t.experience}</Text>
@@ -162,6 +165,7 @@ const ModernLayout = ({ data, t, lang }) => {
           </>
         )}
 
+        {/* EDUCACIÓN (Igual) */}
         {data.education && data.education.length > 0 && (
           <>
             <Text style={styles.sectionTitleMain}>{t.education}</Text>
@@ -174,14 +178,19 @@ const ModernLayout = ({ data, t, lang }) => {
           </>
         )}
 
-        {/* PROYECTOS */}
+        {/* PROYECTOS (MODIFICADO AQUÍ) */}
         {data.projects && data.projects.length > 0 && (
           <>
             <Text style={styles.sectionTitleMain}>{t.projects}</Text>
             {data.projects.map((proj, i) => (
               <View key={i} style={{ marginBottom: 15 }} wrap={false}>
                 <View style={styles.jobHeader}>
-                  <Text style={styles.jobTitle}>{proj.title}</Text>
+                  {/* AQUÍ ESTÁ LA MAGIA: El título es un Link si existe la URL */}
+                  {proj.url ? (
+                    <Link src={proj.url} style={styles.projectTitleLink}>{proj.title}</Link>
+                  ) : (
+                    <Text style={styles.jobTitle}>{proj.title}</Text>
+                  )}
                   <Text style={styles.date}>{proj.role}</Text>
                 </View>
                 {proj.tech_stack && (
@@ -210,6 +219,8 @@ const ClassicLayout = ({ data, t, lang }) => {
     jobTitle: { fontSize: 11, fontWeight: 700 }, 
     company: { fontSize: 10, fontStyle: 'italic' }, 
     date: { fontSize: 9 }, 
+    // Estilo para el enlace del proyecto
+    projectLink: { color: '#4B5563', textDecoration: 'underline' }
   });
 
   return (
@@ -223,13 +234,19 @@ const ClassicLayout = ({ data, t, lang }) => {
           <Text>{data.profile.phone}</Text>
           <Text>|</Text>
           <Text>{data.profile.location}</Text>
+          {data.profile.linkedin && (
+              <>
+                <Text>|</Text>
+                <Link src={data.profile.linkedin} style={{color: 'black'}}>LinkedIn</Link>
+              </>
+          )}
         </View>
       </View>
 
       <Text style={styles.sectionTitle}>{t.profile}</Text>
       <Text style={{ marginBottom: 10, textAlign: 'justify' }} maxLines={4}>{data.profile.summary}</Text>
 
-      {/* RENDERIZADO CONDICIONAL DE EXPERIENCIA */}
+      {/* EXPERIENCIA */}
       {data.experience && data.experience.length > 0 && (
         <>
           <Text style={styles.sectionTitle}>{t.experience}</Text>
@@ -248,7 +265,7 @@ const ClassicLayout = ({ data, t, lang }) => {
         </>
       )}
 
-      {/* RENDERIZADO CONDICIONAL DE EDUCACIÓN */}
+      {/* EDUCACIÓN */}
       {data.education && data.education.length > 0 && (
         <>
           <Text style={styles.sectionTitle}>{t.education}</Text>
@@ -268,9 +285,14 @@ const ClassicLayout = ({ data, t, lang }) => {
           {data.projects.map((proj, i) => (
             <View key={i} style={styles.jobBlock} wrap={false}>
               <View style={styles.jobRow}>
-                <View>
-                    <Text style={styles.jobTitle}>{proj.title}</Text>
-                    <Text style={styles.company}>{proj.role}</Text>
+                <View style={{flexDirection: 'row', alignItems: 'center', gap: 6}}>
+                    {/* ENLACE EN EL TÍTULO DEL PROYECTO */}
+                    {proj.url ? (
+                        <Link src={proj.url} style={{...styles.jobTitle, ...styles.projectLink}}>{proj.title}</Link>
+                    ) : (
+                        <Text style={styles.jobTitle}>{proj.title}</Text>
+                    )}
+                    <Text style={styles.company}>| {proj.role}</Text>
                 </View>
                 {proj.tech_stack && (
                   <Text style={styles.date}>{proj.tech_stack.join(' • ')}</Text>
@@ -301,11 +323,14 @@ const CreativeLayout = ({ data, t, lang }) => {
       sectionTitle: { fontSize: 12, fontWeight: 700, color: '#3B82F6', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 },
       text: { fontSize: 10, color: '#4B5563', marginBottom: 3, lineHeight: 1.3 },
       itemTitle: { fontSize: 11, fontWeight: 700, color: '#111827' },
-      tag: { backgroundColor: '#DBEAFE', color: '#1E40AF', fontSize: 8, padding: '3 6', borderRadius: 8, alignSelf: 'flex-start', marginBottom: 4, marginRight: 4 }
+      tag: { backgroundColor: '#DBEAFE', color: '#1E40AF', fontSize: 8, padding: '3 6', borderRadius: 8, alignSelf: 'flex-start', marginBottom: 4, marginRight: 4 },
+      // NUEVO: Estilo para el título cuando es un enlace (azul y subrayado)
+      projectTitleLink: { fontSize: 11, fontWeight: 700, color: '#3B82F6', textDecoration: 'underline' }
     });
   
     return (
       <Page size="A4" style={styles.page}>
+        {/* ... [El header se queda igual] ... */}
         <View style={styles.header}>
           <Text style={styles.name}>{data.profile.firstName} {data.profile.lastName}</Text>
           <Text style={styles.role}>{data.job_title_target || data.profile.profession}</Text>
@@ -313,6 +338,7 @@ const CreativeLayout = ({ data, t, lang }) => {
               <Text>{data.profile.email}</Text>
               <Text>{data.profile.phone}</Text>
               <Text>{data.profile.location}</Text>
+              {data.profile.linkedin && <Link src={data.profile.linkedin} style={{color: 'white', textDecoration: 'none'}}>LinkedIn</Link>}
           </View>
         </View>
   
@@ -321,7 +347,7 @@ const CreativeLayout = ({ data, t, lang }) => {
             <Text style={styles.sectionTitle}>{t.aboutMe}</Text>
             <Text style={{...styles.text, marginBottom: 20}} maxLines={4}>{data.profile.summary}</Text>
   
-            {/* RENDERIZADO CONDICIONAL DE EXPERIENCIA */}
+            {/* EXPERIENCIA (Igual) */}
             {data.experience && data.experience.length > 0 && (
               <>
                 <Text style={styles.sectionTitle}>{t.experience}</Text>
@@ -335,14 +361,21 @@ const CreativeLayout = ({ data, t, lang }) => {
               </>
             )}
 
-            {/* PROYECTOS MOVIDOS A LA COLUMNA PRINCIPAL (IZQUIERDA) */}
+            {/* PROYECTOS (MODIFICADO AQUÍ) */}
             {data.projects && data.projects.length > 0 && (
               <>
                 <Text style={styles.sectionTitle}>{t.projects}</Text>
                 {data.projects.map((proj, i) => (
                   <View key={i} style={{ marginBottom: 15 }} wrap={false}>
-                    <Text style={styles.itemTitle}>{proj.title}</Text>
-                    <Text style={{ fontSize: 10, color: '#9CA3AF', marginBottom: 4 }}>
+                    <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                        {/* AQUÍ ESTÁ LA MAGIA: Si hay url, el título es un enlace */}
+                        {proj.url ? (
+                             <Link src={proj.url} style={styles.projectTitleLink}>{proj.title}</Link>
+                        ) : (
+                             <Text style={styles.itemTitle}>{proj.title}</Text>
+                        )}
+                    </View>
+                    <Text style={{ fontSize: 10, color: '#9CA3AF', marginBottom: 4, marginTop: 2 }}>
                       {proj.role} {proj.tech_stack && proj.tech_stack.length > 0 ? `| ${proj.tech_stack.join(', ')}` : ''}
                     </Text>
                     <Text style={styles.text} maxLines={3}>{proj.description}</Text>
@@ -352,6 +385,7 @@ const CreativeLayout = ({ data, t, lang }) => {
             )}
           </View>
   
+          {/* ... [El rightCol (Skills, Educación) se queda igual] ... */}
           <View style={styles.rightCol}>
             <Text style={styles.sectionTitle}>{t.skills}</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 20 }}>
@@ -375,7 +409,7 @@ const CreativeLayout = ({ data, t, lang }) => {
         </View>
       </Page>
     );
-  };
+};
 
 // ==========================================
 // 5. COMPONENTE PRINCIPAL (ADAPTER + RENDER)
@@ -437,7 +471,7 @@ export const CVDocument = ({ data, template = 'modern', language = 'es' }) => {
       };
     }),
 
-    // Se adapta dinámicamente si no hay experiencia
+    // Pasamos los proyectos tal cual vienen del JSON (asegúrate de que el backend envía 'url')
     projects: (source.projects || []).slice(0, maxProjects),
 
     skills: {
