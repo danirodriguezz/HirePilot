@@ -30,7 +30,7 @@ function HomePage() {
       <Hero />
       <Features />
       <HowItWorks />
-      <Testimonials
+      {/* <Testimonials
         testimonials={testimonialsData}
         title="Lo que dicen nuestros clientes"
         subtitle="Testimonios reales de profesionales que han transformado su carrera con CVPro"
@@ -38,7 +38,7 @@ function HomePage() {
         showNavigation={true}
         autoplay={false}
       />
-      {/* <Pricing /> */}
+       <Pricing /> */}
       <CTA />
       <Footer />
     </div>

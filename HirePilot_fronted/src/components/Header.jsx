@@ -59,7 +59,7 @@ const Header = ({ isScrolled }) => {
           }`}
           onClick={() => {
             setIsMobileMenuOpen(false)
-            navigate(routes.dashboard || "/dashboard") // Asegúrate de que esta ruta exista
+            navigate(routes.dashboard || "/dashboard")
           }}
         >
           Ir al Dashboard
@@ -90,7 +90,7 @@ const Header = ({ isScrolled }) => {
             navigate(routes.register)
           }}
         >
-          Registrarse
+          Probar App
         </button>
       </>
     )
@@ -103,7 +103,7 @@ const Header = ({ isScrolled }) => {
       }`}
     >
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} style={{ cursor: 'pointer' }}>
           <i className="fas fa-file-alt h-8 w-8 text-2xl text-emerald-600"></i>
           <span className="text-2xl font-bold text-gray-900">HirePilot</span>
         </div>
@@ -111,17 +111,12 @@ const Header = ({ isScrolled }) => {
         <nav
           className={`hidden lg:flex items-center space-x-8`}
         >
+          {/* Cambiamos "Servicios" por "Tecnología" */}
           <button className="text-gray-600 hover:text-emerald-600 transition-colors font-medium" onClick={() => scrollToSection("servicios")}>
-            Servicios
+            Tecnología
           </button>
           <button className="text-gray-600 hover:text-emerald-600 transition-colors font-medium" onClick={() => scrollToSection("como-funciona")}>
             Cómo Funciona
-          </button>
-          <button className="text-gray-600 hover:text-emerald-600 transition-colors font-medium" onClick={() => scrollToSection("testimonios")}>
-            Testimonios
-          </button>
-          <button className="text-gray-600 hover:text-emerald-600 transition-colors font-medium" onClick={() => scrollToSection("precios")}>
-            Precios
           </button>
         </nav>
 
@@ -137,10 +132,8 @@ const Header = ({ isScrolled }) => {
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
           <nav className="absolute top-full left-0 right-0 bg-white flex flex-col py-4 shadow-lg lg:hidden">
-            <button className="text-gray-600 hover:text-emerald-600 transition-colors font-medium py-2 px-4" onClick={() => scrollToSection("servicios")}>Servicios</button>
+            <button className="text-gray-600 hover:text-emerald-600 transition-colors font-medium py-2 px-4" onClick={() => scrollToSection("servicios")}>Tecnología</button>
             <button className="text-gray-600 hover:text-emerald-600 transition-colors font-medium py-2 px-4" onClick={() => scrollToSection("como-funciona")}>Cómo Funciona</button>
-            <button className="text-gray-600 hover:text-emerald-600 transition-colors font-medium py-2 px-4" onClick={() => scrollToSection("testimonios")}>Testimonios</button>
-            <button className="text-gray-600 hover:text-emerald-600 transition-colors font-medium py-2 px-4" onClick={() => scrollToSection("precios")}>Precios</button>
             
             {/* 5. Usamos el componente AuthButtons para Mobile */}
             <div className="flex flex-col px-4 border-t border-gray-100 mt-2 pt-2">

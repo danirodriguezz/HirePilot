@@ -41,18 +41,23 @@ const HowItWorks = () => {
   const steps = [
     {
       number: 1,
-      title: "Sube tu CV",
-      description: "Carga tu currículum actual y completa tu perfil profesional con toda tu experiencia y habilidades.",
+      title: "Crea tu cuenta y perfil",
+      description: "Regístrate y rellena tu experiencia, estudios y proyectos. ¡Recuerda: cuanta más información proporciones, mejor será el resultado final!",
     },
     {
       number: 2,
-      title: "Comparte la oferta",
-      description: "Envíanos el enlace o descripción de la oferta de trabajo a la que quieres aplicar.",
+      title: "Importa la oferta",
+      description: "Pega la descripción exacta del puesto de trabajo al que quieres aplicar para que la IA sepa qué requisitos son los más importantes.",
     },
     {
       number: 3,
-      title: "Recibe tu CV optimizado",
-      description: "En 24 horas recibes tu currículum personalizado y optimizado para esa posición específica.",
+      title: "Configura el formato",
+      description: "Elige la plantilla visual (template) que más te guste y selecciona el idioma en el que deseas que se redacte el currículum.",
+    },
+    {
+      number: 4,
+      title: "Genera con IA",
+      description: "Haz clic en generar y la inteligencia artificial creará un CV completamente adaptado y optimizado para ese puesto de trabajo en segundos.",
     },
   ]
 
@@ -60,11 +65,12 @@ const HowItWorks = () => {
     <section id="como-funciona" className="py-20 px-4 bg-slate-50">
       <div className="container mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">Cómo funciona</h2>
-          <p className="text-xl text-gray-600">Proceso simple en 3 pasos</p>
+          <h2 className="text-4xl font-bold text-gray-900 mb-4">Cómo funciona la aplicación</h2>
+          <p className="text-xl text-gray-600">Generar tu CV adaptado es un proceso muy sencillo</p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
+        {/* Cambiado a grid-cols-4 para acomodar los 4 pasos, o md:grid-cols-2 lg:grid-cols-4 para responsive */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
           {steps.map((step, index) => (
             <Step key={index} number={step.number} title={step.title} description={step.description} />
           ))}

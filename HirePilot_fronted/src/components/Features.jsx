@@ -43,22 +43,22 @@ const FeatureCard = ({ icon, title, description }) => {
 const Features = () => {
   const features = [
     {
-      icon: "fas fa-bullseye",
-      title: "Adaptación Inteligente",
+      icon: "fas fa-user-circle",
+      title: "Perfil Centralizado",
       description:
-        "Analizamos cada oferta de trabajo y ajustamos tu CV para destacar las habilidades y experiencias más relevantes.",
+        "Almacena toda tu trayectoria profesional: experiencia, estudios y proyectos. Cuanta más información aportes, mejor materia prima tendrá la IA para trabajar.",
     },
     {
-      icon: "fas fa-bolt",
-      title: "Optimización ATS",
+      icon: "fas fa-brain",
+      title: "Motor de IA Integrado",
       description:
-        "Optimizamos tu currículum para superar los sistemas de seguimiento de candidatos (ATS) que usan las empresas.",
+        "La Inteligencia artificial compara tu perfil completo con la descripción del puesto, extrayendo y resaltando únicamente lo que la empresa está buscando.",
     },
     {
-      icon: "fas fa-chart-line",
-      title: "Resultados Medibles",
+      icon: "fas fa-file-export",
+      title: "Exportación a Medida",
       description:
-        "Nuestros clientes obtienen 3x más entrevistas y aumentan sus posibilidades de contratación significativamente.",
+        "Elige entre distintas plantillas visuales y selecciona el idioma. La aplicación generará un documento PDF perfectamente formateado y listo para enviar.",
     },
   ]
 
@@ -66,9 +66,9 @@ const Features = () => {
     <section id="servicios" className="py-20 px-4 bg-white">
       <div className="container mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">¿Por qué personalizar tu currículum?</h2>
+          <h2 className="text-4xl font-bold text-gray-900 mb-4">La tecnología detrás del proyecto</h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Cada trabajo es único. Tu currículum también debería serlo.
+            Hemos diseñado un flujo de trabajo que elimina la necesidad de reescribir tu CV para cada oferta.
           </p>
         </div>
 
