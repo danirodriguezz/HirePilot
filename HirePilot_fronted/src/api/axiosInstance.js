@@ -1,10 +1,10 @@
 import axios from "axios";
 
-// 1. Configuración dinámica basada en entorno
 const baseURL = import.meta.env.VITE_API_URL;
 
 const api = axios.create({
   baseURL,
+  withCredentials: true, // 🚨 ESTO ES CLAVE: Permite enviar y recibir cookies (como el refresh_token)
   headers: {
     "Content-Type": "application/json",
   },
@@ -25,7 +25,7 @@ const processQueue = (error, token = null) => {
   failedQueue = [];
 };
 
-// Interceptor de Request
+// Interceptor de Request (Se queda igual, enviamos el access_token guardado)
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("access_token");
@@ -48,12 +48,11 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Evitar bucles en el login o refresh
+    // Evitar bucles infinitos en endpoints de auth
     if (originalRequest.url.includes("login") || originalRequest.url.includes("/token/refresh/")) {
        return Promise.reject(error);
     }
 
-    // Lógica de Bloqueo (Mutex) para concurrencia
     if (isRefreshing) {
       return new Promise(function (resolve, reject) {
         failedQueue.push({ resolve, reject });
@@ -69,20 +68,16 @@ api.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      const refreshToken = localStorage.getItem("refresh_token");
-      
-      if (!refreshToken) {
-          throw new Error("No refresh token available");
-      }
-
-      // Instancia limpia para evitar interceptores
-      const response = await axios.post(`${baseURL}/token/refresh/`, {
-        refresh: refreshToken,
+      // 🚨 CAMBIO AQUÍ: Ya no leemos de localStorage.
+      // Hacemos un POST vacío. El navegador inyectará la cookie 'refresh_token' automáticamente.
+      // Debemos usar axios estándar y pasarle withCredentials.
+      const response = await axios.post(`${baseURL}/token/refresh/`, {}, {
+        withCredentials: true 
       });
 
       const { access } = response.data;
 
-      // Actualizamos storage
+      // Actualizamos storage solo con el nuevo access token
       localStorage.setItem("access_token", access);
       
       // Actualizamos la petición original
@@ -96,14 +91,12 @@ api.interceptors.response.use(
     } catch (refreshError) {
       processQueue(refreshError, null);
       
-      // Limpieza total
+      // Limpieza total: el refresh token falló o expiró
       localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
+      // Ya no hacemos removeItem de refresh_token porque no está en localStorage
       
-      // Emitir un evento para que React se entere (Opcional, pero recomendado)
       window.dispatchEvent(new Event("auth:logout"));
       
-      // Redirección amigable (guardando de dónde venía el usuario)
       const currentPath = window.location.pathname;
       if (currentPath !== "/login") {
         window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`;

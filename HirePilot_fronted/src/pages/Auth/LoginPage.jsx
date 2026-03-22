@@ -60,25 +60,18 @@ const LoginPage = () => {
         password: formData.password
       });
 
-      // 2. Destructuring basado en tu CustomTokenObtainPairSerializer
-      // SimpleJWT devuelve 'access' y 'refresh'. Tu serializer añade el resto.
-      const { access, refresh, user_id, name, plan, email } = response.data;
+      // 🚨 CAMBIO AQUÍ: Ya no extraemos 'refresh' porque ahora viaja en una cookie
+      const { access, user_id, name, plan, email } = response.data;
 
-      // 3. Guardar en LocalStorage
-      // Mapeamos la respuesta 'access' a nuestra key interna 'access_token'
+      // Solo guardamos el access_token y los datos de usuario
       localStorage.setItem("access_token", access);
-      localStorage.setItem("refresh_token", refresh);
+      // BORRAMOS: localStorage.setItem("refresh_token", refresh);
       
-      // Guardamos datos de usuario (útil para mostrar "Hola [Nombre]" en el dashboard)
-      // Tip Pro: Es mejor guardar esto un objeto JSON stringify
       const userData = { user_id, name, email, plan };
       localStorage.setItem("user_data", JSON.stringify(userData));
 
-      // 4. Configurar el header por defecto inmediatamente para evitar race conditions
-      // (Opcional, pero recomendado si haces llamadas justo al montar el Dashboard)
       api.defaults.headers.common["Authorization"] = `Bearer ${access}`;
 
-      // 5. Redirigir
       navigate("/dashboard");
 
     } catch (error) {

@@ -1,4 +1,5 @@
 from rest_framework import generics, status, permissions, viewsets
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.utils.http import urlsafe_base64_decode
 from django.contrib.auth.tokens import default_token_generator
@@ -7,7 +8,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView 
 from .models import UserProfile, WorkExperience, WorkAchievement, Education, Certificate, Language, Skill, Project
 from .serializers import UserRegistrationSerializer, CustomTokenObtainPairSerializer, UserDetailSerializer, WorkExperienceSerializer, EducationSerializer, CertificateSerializer, LanguageSerializer, SkillSerializer, ProjectSerializer
 
@@ -95,6 +96,56 @@ class VerifyEmailView(APIView):
 # Vista de Login Personalizada
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+
+    def post(self, request, *args, **kwargs):
+        # 1. Ejecutamos el flujo normal de SimpleJWT para que valide usuario/contraseña
+        response = super().post(request, *args, **kwargs)
+
+        # 2. Si el login fue exitoso (código 200)
+        if response.status_code == status.HTTP_200_OK:
+            
+            # Extraemos el refresh_token generado por SimpleJWT
+            refresh_token = response.data.get('refresh')
+
+            # 3. Inyectamos la cookie súper segura en la respuesta
+            response.set_cookie(
+                key='refresh_token', 
+                value=refresh_token, 
+                httponly=True, 
+                secure=not settings.DEBUG, # True en producción, False en local
+                samesite='Lax',
+                max_age=60 * 60 * 24 * 7 # Opcional: 7 días en segundos
+            )
+
+            # 4. (Opcional) Borramos el refresh token del cuerpo JSON para 
+            # forzar al frontend a que no pueda guardarlo en localStorage
+            del response.data['refresh']
+            
+        return response
+
+class CustomTokenRefreshView(TokenRefreshView):
+    def post(self, request, *args, **kwargs):
+        refresh_token = request.COOKIES.get('refresh_token')
+        
+        # 1. SOLUCIÓN A LA INMUTABILIDAD: Creamos un diccionario vacío
+        data = {}
+        
+        # 2. Copiamos los datos originales (si los hay) al nuevo diccionario
+        data.update(request.data)
+        
+        # 3. Inyectamos la cookie de forma segura en nuestro diccionario copiado
+        if refresh_token:
+            data['refresh'] = refresh_token
+            
+        # 4. Le pasamos 'data' (nuestra copia mutable) al serializador, NO request.data
+        serializer = self.get_serializer(data=data)
+
+        try:
+            serializer.is_valid(raise_exception=True)
+        except TokenError as e:
+            raise InvalidToken(e.args[0])
+
+        return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
 # Vista para obtener y actualizar el usuario logueado
 class ManageUserView(generics.RetrieveUpdateAPIView):
