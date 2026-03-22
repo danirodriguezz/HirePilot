@@ -9,21 +9,42 @@ import HomePage from './pages/HomePage.jsx'
 import NotFoundPage from './pages/NotFoundPage.jsx'
 import Dashboard from './pages/Dashboard/index.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
+import PublicRoute from './components/PublicRoute.jsx' // 1. IMPORTANTE: Importar el componente
 import { routes } from './routes/routes.js'
 
 const router = createBrowserRouter([
+  // Ruta base (accesible para todos)
   {
     path: routes.home,
     element: <HomePage />,
   },
+  
+  // ---------------------------------------------------------
+  // 🔒 RUTAS PÚBLICAS (Solo accesibles si NO estás logueado)
+  // ---------------------------------------------------------
   {
-    path: routes.login,
-    element: <AuthPages.LoginPage />,
+    element: <PublicRoute />, // El componente padre que evalúa el token
+    children: [
+      {
+        path: routes.login,
+        element: <AuthPages.LoginPage />,
+      },
+      {
+        path: routes.register,
+        element: <AuthPages.RegisterPage />
+      },
+      {
+        // verifyEmail también suele ser pública, un usuario logueado 
+        // rara vez necesita entrar aquí manualmente con un link
+        path: routes.verifyEmail,
+        element: <AuthPages.VerifyEmail />,
+      }
+    ]
   },
-  {
-    path: routes.register,
-    element: <AuthPages.RegisterPage />
-  },
+
+  // ---------------------------------------------------------
+  // 🔐 RUTAS PRIVADAS (Solo accesibles SI estás logueado)
+  // ---------------------------------------------------------
   {
     path: routes.dashboard,
     element: (
@@ -32,13 +53,11 @@ const router = createBrowserRouter([
       </ProtectedRoute>
     ),
   },
+
+  // Ruta 404
   {
     path: routes.notFound,
     element: <NotFoundPage />,
-  },
-  {
-    path: routes.verifyEmail,
-    element: <AuthPages.VerifyEmail />,
   }
 ])
 
