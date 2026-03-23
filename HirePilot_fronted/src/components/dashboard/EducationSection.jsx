@@ -107,15 +107,15 @@ const EducationSection = ({ data, onUpdate }) => {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="bg-white rounded-lg shadow-sm border p-4 sm:p-6 text-sm sm:text-base">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Educación</h2>
           <p className="text-gray-600">Añade tu formación académica</p>
         </div>
         <button
           onClick={handleAddEducation}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md transition-colors flex items-center gap-2"
+          className="w-full sm:w-auto justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md transition-colors flex items-center gap-2"
         >
           <i className="fas fa-plus"></i>
           Añadir Educación
