@@ -49,8 +49,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
-    'accounts',
-    'cv_generator',
+    'accounts.apps.AccountsConfig',
+    'cv_generator.apps.CvGeneratorConfig',
 ]
 
 REST_FRAMEWORK = {
