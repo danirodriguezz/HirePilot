@@ -1,3 +1,4 @@
+// src/main.jsx
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
@@ -9,21 +10,40 @@ import HomePage from './pages/HomePage.jsx'
 import NotFoundPage from './pages/NotFoundPage.jsx'
 import Dashboard from './pages/Dashboard/index.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
-import PublicRoute from './components/PublicRoute.jsx' // 1. IMPORTANTE: Importar el componente
+import PublicRoute from './components/PublicRoute.jsx' 
 import { routes } from './routes/routes.js'
 
+// 1. IMPORTANTE: Importar las nuevas páginas legales
+import PrivacyPolicy from './pages/Legal/PrivacyPolicy.jsx'
+import TermsOfUse from './pages/Legal/TermsOfUse.jsx'
+import HackathonDisclaimer from './pages/Legal/HackathonDisclaimer.jsx'
+
 const router = createBrowserRouter([
-  // Ruta base (accesible para todos)
+  // ---------------------------------------------------------
+  // 🌍 RUTAS GLOBALES (Accesibles para todos, logueados o no)
+  // ---------------------------------------------------------
   {
     path: routes.home,
     element: <HomePage />,
   },
+  {
+    path: routes.privacy,
+    element: <PrivacyPolicy />,
+  },
+  {
+    path: routes.terms,
+    element: <TermsOfUse />,
+  },
+  {
+    path: routes.hackathonDisclaimer,
+    element: <HackathonDisclaimer />,
+  },
   
   // ---------------------------------------------------------
-  // 🔒 RUTAS PÚBLICAS (Solo accesibles si NO estás logueado)
+  // 🔒 RUTAS PÚBLICAS RESTRINGIDAS (Solo si NO estás logueado)
   // ---------------------------------------------------------
   {
-    element: <PublicRoute />, // El componente padre que evalúa el token
+    element: <PublicRoute />, 
     children: [
       {
         path: routes.login,
@@ -34,8 +54,6 @@ const router = createBrowserRouter([
         element: <AuthPages.RegisterPage />
       },
       {
-        // verifyEmail también suele ser pública, un usuario logueado 
-        // rara vez necesita entrar aquí manualmente con un link
         path: routes.verifyEmail,
         element: <AuthPages.VerifyEmail />,
       }
