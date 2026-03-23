@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -17,13 +16,39 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='CVGeneration',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('job_description', models.TextField(help_text='El texto crudo de la oferta de trabajo')),
-                ('job_title_extracted', models.CharField(blank=True, help_text='Título del puesto detectado por la IA', max_length=255, null=True)),
-                ('structured_cv_data', models.JSONField(help_text='JSON listo para que el frontend lo consuma')),
+                (
+                    'id',
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name='ID'
+                    ),
+                ),
+                (
+                    'job_description',
+                    models.TextField(help_text='El texto crudo de la oferta de trabajo'),
+                ),
+                (
+                    'job_title_extracted',
+                    models.CharField(
+                        blank=True,
+                        help_text='Título del puesto detectado por la IA',
+                        max_length=255,
+                        null=True,
+                    ),
+                ),
+                (
+                    'structured_cv_data',
+                    models.JSONField(help_text='JSON listo para que el frontend lo consuma'),
+                ),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='generated_cvs', to=settings.AUTH_USER_MODEL)),
+                (
+                    'user',
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name='generated_cvs',
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
     ]

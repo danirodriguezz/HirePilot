@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('accounts', '0008_alter_education_options_education_current_and_more'),
     ]
@@ -15,7 +14,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Certificate',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                (
+                    'id',
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name='ID'
+                    ),
+                ),
                 ('name', models.CharField(max_length=255)),
                 ('issuing_organization', models.CharField(max_length=255)),
                 ('issue_date', models.DateField()),
@@ -23,7 +27,14 @@ class Migration(migrations.Migration):
                 ('credential_id', models.CharField(blank=True, max_length=255, null=True)),
                 ('credential_url', models.URLField(blank=True, max_length=500, null=True)),
                 ('description', models.TextField(blank=True, null=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='certificates', to=settings.AUTH_USER_MODEL)),
+                (
+                    'user',
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name='certificates',
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
                 'ordering': ['-issue_date'],

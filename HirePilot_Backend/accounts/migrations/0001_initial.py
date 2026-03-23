@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -17,17 +16,62 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='CustomUser',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                (
+                    'id',
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name='ID'
+                    ),
+                ),
                 ('password', models.CharField(max_length=128, verbose_name='password')),
-                ('last_login', models.DateTimeField(blank=True, null=True, verbose_name='last login')),
-                ('is_superuser', models.BooleanField(default=False, help_text='Designates that this user has all permissions without explicitly assigning them.', verbose_name='superuser status')),
-                ('email', models.EmailField(max_length=254, unique=True, verbose_name='email address')),
+                (
+                    'last_login',
+                    models.DateTimeField(blank=True, null=True, verbose_name='last login'),
+                ),
+                (
+                    'is_superuser',
+                    models.BooleanField(
+                        default=False,
+                        help_text='Designates that this user has all permissions without explicitly assigning them.',
+                        verbose_name='superuser status',
+                    ),
+                ),
+                (
+                    'email',
+                    models.EmailField(max_length=254, unique=True, verbose_name='email address'),
+                ),
                 ('is_staff', models.BooleanField(default=False)),
                 ('is_active', models.BooleanField(default=True)),
                 ('is_verified', models.BooleanField(default=False)),
-                ('plan', models.CharField(choices=[('FREE', 'Free'), ('PREMIUM', 'Premium'), ('PRO', 'Pro')], default='FREE', max_length=10)),
-                ('groups', models.ManyToManyField(blank=True, help_text='The groups this user belongs to. A user will get all permissions granted to each of their groups.', related_name='user_set', related_query_name='user', to='auth.group', verbose_name='groups')),
-                ('user_permissions', models.ManyToManyField(blank=True, help_text='Specific permissions for this user.', related_name='user_set', related_query_name='user', to='auth.permission', verbose_name='user permissions')),
+                (
+                    'plan',
+                    models.CharField(
+                        choices=[('FREE', 'Free'), ('PREMIUM', 'Premium'), ('PRO', 'Pro')],
+                        default='FREE',
+                        max_length=10,
+                    ),
+                ),
+                (
+                    'groups',
+                    models.ManyToManyField(
+                        blank=True,
+                        help_text='The groups this user belongs to. A user will get all permissions granted to each of their groups.',
+                        related_name='user_set',
+                        related_query_name='user',
+                        to='auth.group',
+                        verbose_name='groups',
+                    ),
+                ),
+                (
+                    'user_permissions',
+                    models.ManyToManyField(
+                        blank=True,
+                        help_text='Specific permissions for this user.',
+                        related_name='user_set',
+                        related_query_name='user',
+                        to='auth.permission',
+                        verbose_name='user permissions',
+                    ),
+                ),
             ],
             options={
                 'abstract': False,
@@ -36,65 +80,176 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Education',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                (
+                    'id',
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name='ID'
+                    ),
+                ),
                 ('institution', models.CharField(max_length=255)),
                 ('degree', models.CharField(max_length=255)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='education', to=settings.AUTH_USER_MODEL)),
+                (
+                    'user',
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name='education',
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
             name='JobPosting',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                (
+                    'id',
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name='ID'
+                    ),
+                ),
                 ('title', models.CharField(max_length=255)),
                 ('original_text', models.TextField()),
                 ('analysis_result', models.JSONField(default=dict)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='job_postings', to=settings.AUTH_USER_MODEL)),
+                (
+                    'user',
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name='job_postings',
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
             name='Skill',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                (
+                    'id',
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name='ID'
+                    ),
+                ),
                 ('name', models.CharField(max_length=255)),
                 ('category', models.CharField(max_length=255)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='skills', to=settings.AUTH_USER_MODEL)),
+                (
+                    'user',
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name='skills',
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
             name='TailoredCV',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                (
+                    'id',
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name='ID'
+                    ),
+                ),
                 ('content_snapshot', models.JSONField()),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('job_posting', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='generated_cvs', to='accounts.jobposting')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='tailored_cvs', to=settings.AUTH_USER_MODEL)),
+                (
+                    'job_posting',
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name='generated_cvs',
+                        to='accounts.jobposting',
+                    ),
+                ),
+                (
+                    'user',
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name='tailored_cvs',
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
             name='UserProfile',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('headline', models.CharField(help_text='Ej: Senior Full Stack Developer', max_length=255)),
+                (
+                    'id',
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name='ID'
+                    ),
+                ),
+                (
+                    'headline',
+                    models.CharField(help_text='Ej: Senior Full Stack Developer', max_length=255),
+                ),
                 ('summary', models.TextField()),
                 ('linkedin_url', models.URLField(blank=True, max_length=255, null=True)),
                 ('phone', models.CharField(max_length=20)),
-                ('years_of_experience', models.CharField(choices=[('0', 'Sin experiencia'), ('1-2', 'Entre 1 y 2 años'), ('2-3', 'Entre 2 y 3 años'), ('3-4', 'Entre 3 y 4 años'), ('4-5', 'Entre 4 y 5 años'), ('5-6', 'Entre 5 y 6 años'), ('6+', 'Más de 6 años')], default='0', max_length=10)),
-                ('industry', models.CharField(choices=[('TECH', 'Tecnología y Software'), ('FINANCE', 'Finanzas y Banca'), ('HEALTH', 'Salud y Medicina'), ('EDUCATION', 'Educación'), ('MARKETING', 'Marketing y Publicidad'), ('OTHER', 'Otro')], default='OTHER', max_length=50)),
-                ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='profile', to=settings.AUTH_USER_MODEL)),
+                (
+                    'years_of_experience',
+                    models.CharField(
+                        choices=[
+                            ('0', 'Sin experiencia'),
+                            ('1-2', 'Entre 1 y 2 años'),
+                            ('2-3', 'Entre 2 y 3 años'),
+                            ('3-4', 'Entre 3 y 4 años'),
+                            ('4-5', 'Entre 4 y 5 años'),
+                            ('5-6', 'Entre 5 y 6 años'),
+                            ('6+', 'Más de 6 años'),
+                        ],
+                        default='0',
+                        max_length=10,
+                    ),
+                ),
+                (
+                    'industry',
+                    models.CharField(
+                        choices=[
+                            ('TECH', 'Tecnología y Software'),
+                            ('FINANCE', 'Finanzas y Banca'),
+                            ('HEALTH', 'Salud y Medicina'),
+                            ('EDUCATION', 'Educación'),
+                            ('MARKETING', 'Marketing y Publicidad'),
+                            ('OTHER', 'Otro'),
+                        ],
+                        default='OTHER',
+                        max_length=50,
+                    ),
+                ),
+                (
+                    'user',
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name='profile',
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
             name='WorkExperience',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                (
+                    'id',
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name='ID'
+                    ),
+                ),
                 ('company', models.CharField(max_length=255)),
                 ('role', models.CharField(max_length=255)),
                 ('current_job', models.BooleanField(default=False)),
                 ('start_date', models.DateField()),
                 ('end_date', models.DateField(blank=True, null=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='work_experiences', to=settings.AUTH_USER_MODEL)),
+                (
+                    'user',
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name='work_experiences',
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
                 'ordering': ['-start_date'],
@@ -103,10 +258,22 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='WorkAchievement',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                (
+                    'id',
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name='ID'
+                    ),
+                ),
                 ('description', models.TextField()),
                 ('keywords', models.JSONField(default=list)),
-                ('work_experience', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='achievements', to='accounts.workexperience')),
+                (
+                    'work_experience',
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name='achievements',
+                        to='accounts.workexperience',
+                    ),
+                ),
             ],
         ),
     ]

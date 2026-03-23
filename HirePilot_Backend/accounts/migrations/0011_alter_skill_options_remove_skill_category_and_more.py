@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('accounts', '0010_language'),
     ]
@@ -21,12 +20,25 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='skill',
             name='level',
-            field=models.CharField(choices=[('BEGINNER', 'Principiante'), ('INTERMEDIATE', 'Intermedio'), ('ADVANCED', 'Avanzado'), ('EXPERT', 'Experto')], default='INTERMEDIATE', max_length=20),
+            field=models.CharField(
+                choices=[
+                    ('BEGINNER', 'Principiante'),
+                    ('INTERMEDIATE', 'Intermedio'),
+                    ('ADVANCED', 'Avanzado'),
+                    ('EXPERT', 'Experto'),
+                ],
+                default='INTERMEDIATE',
+                max_length=20,
+            ),
         ),
         migrations.AddField(
             model_name='skill',
             name='skill_type',
-            field=models.CharField(choices=[('TECHNICAL', 'Technical'), ('SOFT', 'Soft')], default='TECHNICAL', max_length=20),
+            field=models.CharField(
+                choices=[('TECHNICAL', 'Technical'), ('SOFT', 'Soft')],
+                default='TECHNICAL',
+                max_length=20,
+            ),
         ),
         migrations.AlterField(
             model_name='skill',

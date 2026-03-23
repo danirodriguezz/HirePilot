@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('accounts', '0002_customuser_first_name_customuser_last_name'),
     ]
@@ -13,6 +12,8 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='userprofile',
             name='personal_website',
-            field=models.URLField(blank=True, help_text='Sitio web personal o portafolio', max_length=255, null=True),
+            field=models.URLField(
+                blank=True, help_text='Sitio web personal o portafolio', max_length=255, null=True
+            ),
         ),
     ]

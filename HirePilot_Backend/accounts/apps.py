@@ -10,4 +10,3 @@ class AccountsConfig(AppConfig):
         Este método se ejecuta cuando Django arranca.
         Aquí importamos las signals para que empiecen a escuchar.
         """
-        import accounts.signals

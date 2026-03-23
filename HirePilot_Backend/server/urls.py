@@ -14,13 +14,11 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 from django.contrib import admin
-from django.urls import path, include
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+
 import accounts.views as views
 
 # Usamos el Router para manejar las viewsets automáticamente
@@ -34,14 +32,22 @@ router.register(r'projects', views.ProjectViewSet, basename='projects')
 
 urlpatterns = [
     path('api/admin/', admin.site.urls),
-    path('api/registration-options/', views.RegistrationOptionsView.as_view(), name='registration-options'),
+    path(
+        'api/registration-options/',
+        views.RegistrationOptionsView.as_view(),
+        name='registration-options',
+    ),
     path('api/register/', views.RegisterView.as_view(), name='register'),
     path('api/login/', views.CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/', views.CustomTokenRefreshView.as_view(), name='token_refresh'), 
-    path('api/registration-options/', views.RegistrationOptionsView.as_view(), name='registration-options'),
+    path('api/token/refresh/', views.CustomTokenRefreshView.as_view(), name='token_refresh'),
+    path(
+        'api/registration-options/',
+        views.RegistrationOptionsView.as_view(),
+        name='registration-options',
+    ),
     path('api/me/', views.ManageUserView.as_view(), name='me'),
     path('api/logout/', views.LogoutView.as_view(), name='logout'),
     path('api/verify-email/', views.VerifyEmailView.as_view(), name='verify-email'),
     path('api/', include(router.urls)),
-    path('api/cv/', include('cv_generator.urls'))
+    path('api/cv/', include('cv_generator.urls')),
 ]

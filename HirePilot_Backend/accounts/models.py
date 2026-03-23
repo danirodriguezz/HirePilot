@@ -1,6 +1,7 @@
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
-from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.utils.translation import gettext_lazy as _
+
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -15,8 +16,9 @@ class CustomUserManager(BaseUserManager):
     def create_superuser(self, email, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('is_verified', True) # Superusuario siempre verificado
+        extra_fields.setdefault('is_verified', True)  # Superusuario siempre verificado
         return self.create_user(email, password, **extra_fields)
+
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     class Plan(models.TextChoices):
@@ -29,14 +31,10 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     last_name = models.CharField(_('last name'), max_length=150, blank=True)
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
-    
+
     # Campos específicos de tu diagrama
     is_verified = models.BooleanField(default=False)
-    plan = models.CharField(
-        max_length=10,
-        choices=Plan.choices,
-        default=Plan.FREE
-    )
+    plan = models.CharField(max_length=10, choices=Plan.choices, default=Plan.FREE)
 
     objects = CustomUserManager()
 
@@ -45,7 +43,8 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
-    
+
+
 class UserProfile(models.Model):
     # 1. ENUM para Industria (Igual que antes)
     class Industry(models.TextChoices):
@@ -55,7 +54,7 @@ class UserProfile(models.Model):
         EDUCATION = 'EDUCATION', _('Educación')
         MARKETING = 'MARKETING', _('Marketing y Publicidad')
         OTHER = 'OTHER', _('Otro')
-    
+
     # 2. NUEVO ENUM para Años de Experiencia
     # El valor de la izquierda es lo que se guarda en BD, el de la derecha lo que ve el usuario
     class ExperienceRange(models.TextChoices):
@@ -66,81 +65,66 @@ class UserProfile(models.Model):
         FOUR_TO_FIVE = '4-5', _('Entre 4 y 5 años')
         FIVE_TO_SIX = '5-6', _('Entre 5 y 6 años')
         SIX_PLUS = '6+', _('Más de 6 años')
-    
-    user = models.OneToOneField(
-        CustomUser, 
-        on_delete=models.CASCADE, 
-        related_name='profile'
-    )
 
-    headline = models.CharField(
-        max_length=255, 
-        help_text="Ej: Senior Full Stack Developer"
-    )
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='profile')
+
+    headline = models.CharField(max_length=255, help_text='Ej: Senior Full Stack Developer')
 
     summary = models.TextField(null=True, blank=True)
     linkedin_url = models.URLField(max_length=255, blank=True, null=True)
-    personal_website = models.URLField(max_length=255, blank=True, null=True, help_text="Sitio web personal o portafolio")
+    personal_website = models.URLField(
+        max_length=255, blank=True, null=True, help_text='Sitio web personal o portafolio'
+    )
     phone = models.CharField(max_length=20, null=True, blank=True)
     # 3. CAMBIO AQUÍ: De IntegerField a CharField con choices
     years_of_experience = models.CharField(
-        max_length=10, # Suficiente para guardar '1-2', '6+', etc.
+        max_length=10,  # Suficiente para guardar '1-2', '6+', etc.
         choices=ExperienceRange.choices,
-        default=ExperienceRange.NO_EXP
+        default=ExperienceRange.NO_EXP,
     )
-    
-    industry = models.CharField(
-        max_length=50,
-        choices=Industry.choices,
-        default=Industry.OTHER
-    )
+
+    industry = models.CharField(max_length=50, choices=Industry.choices, default=Industry.OTHER)
+
     def __str__(self):
         # Muestra el valor legible en el admin (ej: "Entre 1 y 2 años")
-        return f"{self.headline} ({self.get_years_of_experience_display()})"
+        return f'{self.headline} ({self.get_years_of_experience_display()})'
+
 
 class WorkExperience(models.Model):
-    user = models.ForeignKey(
-        CustomUser, 
-        on_delete=models.CASCADE, 
-        related_name='work_experiences'
-    )
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='work_experiences')
     description = models.TextField(blank=True, null=True)
     company = models.CharField(max_length=255)
     role = models.CharField(max_length=255)
-    location = models.CharField(max_length=255, blank=True, default="")
+    location = models.CharField(max_length=255, blank=True, default='')
     current_job = models.BooleanField(default=False)
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)
 
     class Meta:
-        ordering = ['-start_date'] # Ordenar por fecha descendente por defecto
+        ordering = ['-start_date']  # Ordenar por fecha descendente por defecto
 
     def __str__(self):
-        return f"{self.role} at {self.company}"
+        return f'{self.role} at {self.company}'
+
 
 class WorkAchievement(models.Model):
     work_experience = models.ForeignKey(
-        WorkExperience, 
-        on_delete=models.CASCADE, 
-        related_name='achievements'
+        WorkExperience, on_delete=models.CASCADE, related_name='achievements'
     )
     description = models.TextField()
     # Usamos JSONField de Postgres para flexibilidad en keywords
-    keywords = models.JSONField(default=list) 
+    keywords = models.JSONField(default=list)
 
     def __str__(self):
-        return f"Achievement for {self.work_experience}"
+        return f'Achievement for {self.work_experience}'
+
 
 class Education(models.Model):
-    user = models.ForeignKey(
-        CustomUser, 
-        on_delete=models.CASCADE, 
-        related_name='education'
-    )
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='education')
     institution = models.CharField(max_length=255)
     degree = models.CharField(max_length=255)
-    field_of_study = models.CharField(max_length=255, blank=True, default="")
-    location = models.CharField(max_length=255, blank=True, default="")
+    field_of_study = models.CharField(max_length=255, blank=True, default='')
+    location = models.CharField(max_length=255, blank=True, default='')
 
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
@@ -150,52 +134,51 @@ class Education(models.Model):
     description = models.TextField(blank=True, null=True)
 
     class Meta:
-        ordering = ['-start_date'] # Ordenar por fecha, lo más reciente primero
+        ordering = ['-start_date']  # Ordenar por fecha, lo más reciente primero
 
     def __str__(self):
-        return f"{self.degree} at {self.institution}"
+        return f'{self.degree} at {self.institution}'
+
 
 class Certificate(models.Model):
-    user = models.ForeignKey(
-        CustomUser, 
-        on_delete=models.CASCADE, 
-        related_name='certificates'
-    )
-    name = models.CharField(max_length=255) # Nombre del certificado
-    issuing_organization = models.CharField(max_length=255) # Organización emisora
-    issue_date = models.DateField() # Fecha de emisión
-    expiration_date = models.DateField(null=True, blank=True) # Fecha de expiración (opcional)
-    credential_id = models.CharField(max_length=255, blank=True, null=True) # ID Credencial (opcional)
-    credential_url = models.URLField(max_length=500, blank=True, null=True) # URL verificación (opcional)
-    description = models.TextField(blank=True, null=True) # Descripción (opcional)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='certificates')
+    name = models.CharField(max_length=255)  # Nombre del certificado
+    issuing_organization = models.CharField(max_length=255)  # Organización emisora
+    issue_date = models.DateField()  # Fecha de emisión
+    expiration_date = models.DateField(null=True, blank=True)  # Fecha de expiración (opcional)
+    credential_id = models.CharField(
+        max_length=255, blank=True, null=True
+    )  # ID Credencial (opcional)
+    credential_url = models.URLField(
+        max_length=500, blank=True, null=True
+    )  # URL verificación (opcional)
+    description = models.TextField(blank=True, null=True)  # Descripción (opcional)
 
     class Meta:
-        ordering = ['-issue_date'] # Los más recientes primero
+        ordering = ['-issue_date']  # Los más recientes primero
 
     def __str__(self):
-        return f"{self.name} by {self.issuing_organization}"
-    
+        return f'{self.name} by {self.issuing_organization}'
+
+
 class Language(models.Model):
-    user = models.ForeignKey(
-        CustomUser, 
-        on_delete=models.CASCADE, 
-        related_name='languages'
-    )
-    language = models.CharField(max_length=100) # Ej: Inglés, Francés
-    level = models.CharField(max_length=100) # Ej: Nativo, C1, Avanzado
-    certificate = models.CharField(max_length=255, blank=True, null=True) # Ej: Cambridge CAE
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='languages')
+    language = models.CharField(max_length=100)  # Ej: Inglés, Francés
+    level = models.CharField(max_length=100)  # Ej: Nativo, C1, Avanzado
+    certificate = models.CharField(max_length=255, blank=True, null=True)  # Ej: Cambridge CAE
 
     class Meta:
-        ordering = ['language'] # Orden alfabético
+        ordering = ['language']  # Orden alfabético
 
     def __str__(self):
-        return f"{self.language} ({self.level})"
+        return f'{self.language} ({self.level})'
+
 
 class Skill(models.Model):
     # Opciones para el Tipo de Habilidad
     class SkillType(models.TextChoices):
-        TECHNICAL = 'TECHNICAL', 'Technical' # Habilidades duras (Python, SQL)
-        SOFT = 'SOFT', 'Soft'           # Habilidades blandas (Liderazgo, Comunicación)
+        TECHNICAL = 'TECHNICAL', 'Technical'  # Habilidades duras (Python, SQL)
+        SOFT = 'SOFT', 'Soft'  # Habilidades blandas (Liderazgo, Comunicación)
 
     # Opciones para el Nivel
     class SkillLevel(models.TextChoices):
@@ -204,28 +187,21 @@ class Skill(models.Model):
         ADVANCED = 'ADVANCED', 'Avanzado'
         EXPERT = 'EXPERT', 'Experto'
 
-    user = models.ForeignKey(
-        CustomUser, 
-        on_delete=models.CASCADE, 
-        related_name='skills'
-    )
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='skills')
     name = models.CharField(max_length=100)
     skill_type = models.CharField(
-        max_length=20, 
-        choices=SkillType.choices, 
-        default=SkillType.TECHNICAL
+        max_length=20, choices=SkillType.choices, default=SkillType.TECHNICAL
     )
     level = models.CharField(
-        max_length=20, 
-        choices=SkillLevel.choices, 
-        default=SkillLevel.INTERMEDIATE
+        max_length=20, choices=SkillLevel.choices, default=SkillLevel.INTERMEDIATE
     )
 
     class Meta:
-        ordering = ['skill_type', '-level', 'name'] # Ordenar por tipo, luego nivel, luego nombre
+        ordering = ['skill_type', '-level', 'name']  # Ordenar por tipo, luego nivel, luego nombre
 
     def __str__(self):
-        return f"{self.name} ({self.get_level_display()})"
+        return f'{self.name} ({self.get_level_display()})'
+
 
 class Project(models.Model):
     # Categorías genéricas aplicables a cualquier industria
@@ -236,39 +212,43 @@ class Project(models.Model):
         PERSONAL = 'PERSONAL', 'Proyecto Personal'
         VOLUNTEER = 'VOLUNTEER', 'Voluntariado'
 
-    user = models.ForeignKey(
-        CustomUser, 
-        on_delete=models.CASCADE, 
-        related_name='projects'
-    )
-    title = models.CharField(max_length=255) # Ej: "Campaña de Verano 2024", "Rebranding Marca X"
-    
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='projects')
+    title = models.CharField(max_length=255)  # Ej: "Campaña de Verano 2024", "Rebranding Marca X"
+
     # Nuevo: Tu rol específico en este proyecto
-    role = models.CharField(max_length=255, blank=True, help_text="Ej: Project Manager, Lead Designer, Content Creator")
-    
-    # Nuevo: Cliente o Entidad (Opcional)
-    organization = models.CharField(max_length=255, blank=True, help_text="Cliente, Empresa o Institución")
-    
-    category = models.CharField(
-        max_length=20, 
-        choices=ProjectCategory.choices, 
-        default=ProjectCategory.PROFESSIONAL
+    role = models.CharField(
+        max_length=255, blank=True, help_text='Ej: Project Manager, Lead Designer, Content Creator'
     )
-    
-    description = models.TextField() # Resultados, KPIs, desafíos superados
-    
+
+    # Nuevo: Cliente o Entidad (Opcional)
+    organization = models.CharField(
+        max_length=255, blank=True, help_text='Cliente, Empresa o Institución'
+    )
+
+    category = models.CharField(
+        max_length=20, choices=ProjectCategory.choices, default=ProjectCategory.PROFESSIONAL
+    )
+
+    description = models.TextField()  # Resultados, KPIs, desafíos superados
+
     # Enlaces flexibles
-    project_url = models.URLField(blank=True, null=True, help_text="Enlace principal (Web, Portfolio, Noticia)")
-    resource_url = models.URLField(blank=True, null=True, help_text="Enlace secundario (PDF, Video, Drive, GitHub)")
-    
+    project_url = models.URLField(
+        blank=True, null=True, help_text='Enlace principal (Web, Portfolio, Noticia)'
+    )
+    resource_url = models.URLField(
+        blank=True, null=True, help_text='Enlace secundario (PDF, Video, Drive, GitHub)'
+    )
+
     # Relación con Skills (Herramientas: Photoshop, Google Ads, Excel, Python...)
     skills = models.ManyToManyField('Skill', related_name='projects', blank=True)
-    
+
     start_date = models.DateField(null=True, blank=True)
-    end_date = models.DateField(null=True, blank=True) # Si es null, se asume "En curso" o "Indefinido"
-    
+    end_date = models.DateField(
+        null=True, blank=True
+    )  # Si es null, se asume "En curso" o "Indefinido"
+
     class Meta:
         ordering = ['-end_date', '-start_date']
 
     def __str__(self):
-        return f"{self.title} ({self.role})"
+        return f'{self.title} ({self.role})'

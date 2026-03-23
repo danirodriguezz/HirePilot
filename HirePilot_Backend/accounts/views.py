@@ -1,39 +1,60 @@
-from rest_framework import generics, status, permissions, viewsets
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.utils.http import urlsafe_base64_decode
 from django.contrib.auth.tokens import default_token_generator
-from .utils import send_verification_email
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.views import APIView
-from rest_framework.response import Response
+from django.utils.http import urlsafe_base64_decode
+from rest_framework import generics, permissions, status, viewsets
 from rest_framework.permissions import AllowAny
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView 
-from .models import UserProfile, WorkExperience, WorkAchievement, Education, Certificate, Language, Skill, Project
-from .serializers import UserRegistrationSerializer, CustomTokenObtainPairSerializer, UserDetailSerializer, WorkExperienceSerializer, EducationSerializer, CertificateSerializer, LanguageSerializer, SkillSerializer, ProjectSerializer
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
+from .models import (
+    Certificate,
+    Education,
+    Language,
+    Project,
+    Skill,
+    UserProfile,
+    WorkExperience,
+)
+from .serializers import (
+    CertificateSerializer,
+    CustomTokenObtainPairSerializer,
+    EducationSerializer,
+    LanguageSerializer,
+    ProjectSerializer,
+    SkillSerializer,
+    UserDetailSerializer,
+    UserRegistrationSerializer,
+    WorkExperienceSerializer,
+)
+from .utils import send_verification_email
 
 User = get_user_model()
+
 
 class RegistrationOptionsView(APIView):
     """
     Devuelve las opciones dinámicas para los formularios de registro/perfil.
     Accesible públicamente para que el usuario pueda ver las opciones antes de registrarse.
     """
-    permission_classes = [AllowAny] 
+
+    permission_classes = [AllowAny]
 
     def get(self, request):
         # Función auxiliar para formatear las opciones como lista de diccionarios
         def format_choices(choices):
-            return [{"value": key, "label": str(label)} for key, label in choices]
+            return [{'value': key, 'label': str(label)} for key, label in choices]
 
         data = {
-            "industries": format_choices(UserProfile.Industry.choices),
-            "experience_ranges": format_choices(UserProfile.ExperienceRange.choices),
+            'industries': format_choices(UserProfile.Industry.choices),
+            'experience_ranges': format_choices(UserProfile.ExperienceRange.choices),
         }
-        
+
         return Response(data)
-    
+
+
 # Vista de Registro
 class RegisterView(generics.CreateAPIView):
     serializer_class = UserRegistrationSerializer
@@ -50,26 +71,26 @@ class RegisterView(generics.CreateAPIView):
         try:
             send_verification_email(user)
         except Exception as e:
-            # Si falla el email, ¿qué hacemos? 
+            # Si falla el email, ¿qué hacemos?
             # Opción A: Borrar el usuario y dar error.
             # Opción B: Dejar el usuario pero avisar que no se envió el correo.
             # Por ahora, logueamos el error pero dejamos que el registro fluya.
-            print(f"Error enviando correo: {e}")
+            print(f'Error enviando correo: {e}')
 
         headers = self.get_success_headers(serializer.data)
-        
+
         return Response(
             {
-                "message": "Usuario creado exitosamente. Revisa tu correo para verificar la cuenta.",
-                "user": serializer.data
-            }, 
-            status=status.HTTP_201_CREATED, 
-            headers=headers
+                'message': 'Usuario creado exitosamente. Revisa tu correo para verificar la cuenta.',
+                'user': serializer.data,
+            },
+            status=status.HTTP_201_CREATED,
+            headers=headers,
         )
 
 
 class VerifyEmailView(APIView):
-    permission_classes = [AllowAny] # Debe ser pública
+    permission_classes = [AllowAny]  # Debe ser pública
 
     def post(self, request):
         uidb64 = request.data.get('uid')
@@ -89,9 +110,14 @@ class VerifyEmailView(APIView):
         if user is not None and default_token_generator.check_token(user, token):
             user.is_verified = True
             user.save()
-            return Response({'message': 'Email verificado correctamente'}, status=status.HTTP_200_OK)
+            return Response(
+                {'message': 'Email verificado correctamente'}, status=status.HTTP_200_OK
+            )
         else:
-            return Response({'error': 'El link es inválido o ha expirado'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'El link es inválido o ha expirado'}, status=status.HTTP_400_BAD_REQUEST
+            )
+
 
 # Vista de Login Personalizada
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -103,40 +129,40 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
         # 2. Si el login fue exitoso (código 200)
         if response.status_code == status.HTTP_200_OK:
-            
             # Extraemos el refresh_token generado por SimpleJWT
             refresh_token = response.data.get('refresh')
 
             # 3. Inyectamos la cookie súper segura en la respuesta
             response.set_cookie(
-                key='refresh_token', 
-                value=refresh_token, 
-                httponly=True, 
-                secure=not settings.DEBUG, # True en producción, False en local
+                key='refresh_token',
+                value=refresh_token,
+                httponly=True,
+                secure=not settings.DEBUG,  # True en producción, False en local
                 samesite='Lax',
-                max_age=60 * 60 * 24 * 7 # Opcional: 7 días en segundos
+                max_age=60 * 60 * 24 * 7,  # Opcional: 7 días en segundos
             )
 
-            # 4. (Opcional) Borramos el refresh token del cuerpo JSON para 
+            # 4. (Opcional) Borramos el refresh token del cuerpo JSON para
             # forzar al frontend a que no pueda guardarlo en localStorage
             del response.data['refresh']
-            
+
         return response
+
 
 class CustomTokenRefreshView(TokenRefreshView):
     def post(self, request, *args, **kwargs):
         refresh_token = request.COOKIES.get('refresh_token')
-        
+
         # 1. SOLUCIÓN A LA INMUTABILIDAD: Creamos un diccionario vacío
         data = {}
-        
+
         # 2. Copiamos los datos originales (si los hay) al nuevo diccionario
         data.update(request.data)
-        
+
         # 3. Inyectamos la cookie de forma segura en nuestro diccionario copiado
         if refresh_token:
             data['refresh'] = refresh_token
-            
+
         # 4. Le pasamos 'data' (nuestra copia mutable) al serializador, NO request.data
         serializer = self.get_serializer(data=data)
 
@@ -147,6 +173,7 @@ class CustomTokenRefreshView(TokenRefreshView):
 
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
+
 # Vista para obtener y actualizar el usuario logueado
 class ManageUserView(generics.RetrieveUpdateAPIView):
     serializer_class = UserDetailSerializer
@@ -156,18 +183,20 @@ class ManageUserView(generics.RetrieveUpdateAPIView):
         # Magia: Devuelve el usuario del request (sacado del token)
         return self.request.user
 
+
 # Vista para Logout (Blacklist del token)
 class LogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         try:
-            refresh_token = request.data["refresh"]
+            refresh_token = request.data['refresh']
             token = RefreshToken(refresh_token)
             token.blacklist()
             return Response(status=status.HTTP_205_RESET_CONTENT)
-        except Exception as e:
+        except Exception:
             return Response(status=status.HTTP_400_BAD_REQUEST)
+
 
 class WorkExperienceViewSet(viewsets.ModelViewSet):
     serializer_class = WorkExperienceSerializer
@@ -181,6 +210,7 @@ class WorkExperienceViewSet(viewsets.ModelViewSet):
         # Inyectamos el usuario logueado al crear el registro
         serializer.save(user=self.request.user)
 
+
 class EducationViewSet(viewsets.ModelViewSet):
     serializer_class = EducationSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -192,6 +222,7 @@ class EducationViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         # Asignamos automáticamente el usuario logueado
         serializer.save(user=self.request.user)
+
 
 class CertificateViewSet(viewsets.ModelViewSet):
     serializer_class = CertificateSerializer
@@ -205,6 +236,7 @@ class CertificateViewSet(viewsets.ModelViewSet):
         # Asignar automáticamente el certificado al usuario autenticado
         serializer.save(user=self.request.user)
 
+
 class LanguageViewSet(viewsets.ModelViewSet):
     serializer_class = LanguageSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -217,6 +249,7 @@ class LanguageViewSet(viewsets.ModelViewSet):
         # Asigna el usuario automáticamente al crear
         serializer.save(user=self.request.user)
 
+
 class SkillViewSet(viewsets.ModelViewSet):
     serializer_class = SkillSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -227,8 +260,10 @@ class SkillViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
+
 # Importar: from .models import Project
 # Importar: from .serializers import ProjectSerializer
+
 
 class ProjectViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
@@ -236,7 +271,11 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         # Optimización: 'prefetch_related' acelera la carga de la relación ManyToMany
-        return Project.objects.filter(user=self.request.user).prefetch_related('skills').order_by('-end_date')
+        return (
+            Project.objects.filter(user=self.request.user)
+            .prefetch_related('skills')
+            .order_by('-end_date')
+        )
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

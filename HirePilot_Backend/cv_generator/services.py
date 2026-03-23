@@ -1,11 +1,22 @@
 import json
 import logging
+import unicodedata
+
 from django.conf import settings
 from openai import OpenAI
-import unicodedata  
-from accounts.models import UserProfile, WorkExperience, Education, Skill, Project, Language, Certificate
+
+from accounts.models import (
+    Certificate,
+    Education,
+    Language,
+    Project,
+    Skill,
+    UserProfile,
+    WorkExperience,
+)
 
 logger = logging.getLogger(__name__)
+
 
 class CVGeneratorService:
     def __init__(self, user, job_description, language):
@@ -14,8 +25,7 @@ class CVGeneratorService:
         self.language = language
 
         self.client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key=settings.OPENAI_API_KEY
+            base_url='https://openrouter.ai/api/v1', api_key=settings.OPENAI_API_KEY
         )
 
     def generate_cv(self):
@@ -30,24 +40,24 @@ class CVGeneratorService:
         ai_generated_content = {}
 
         if not settings.OPENAI_API_KEY:
-            logger.warning("OPENAI_API_KEY no encontrada. Usando modo MOCK.")
+            logger.warning('OPENAI_API_KEY no encontrada. Usando modo MOCK.')
             ai_generated_content = self._mock_ai_logic(user_data)
         else:
             try:
                 ai_generated_content = self._call_openai(user_data)
             except Exception as e:
                 error_msg = str(e).encode('ascii', 'replace').decode('ascii')
-                logger.error(f"Error llamando a OpenAI: {error_msg}")
+                logger.error(f'Error llamando a OpenAI: {error_msg}')
                 ai_generated_content = self._mock_ai_logic(user_data)
 
         # 3. MERGE FINAL (ESTRATEGIA HÍBRIDA)
         # Inyectamos los datos personales VERIFICADOS de la DB en la respuesta final.
         # Esto asegura que el nombre, email y teléfono nunca sean alucinados por la IA.
         final_response = {
-            "profile": user_data["personal_info"],  # Datos estáticos (DB)
-            **ai_generated_content                  # Datos dinámicos (IA)
+            'profile': user_data['personal_info'],  # Datos estáticos (DB)
+            **ai_generated_content,  # Datos dinámicos (IA)
         }
-        
+
         return final_response
 
     def _call_openai(self, user_data):
@@ -57,13 +67,10 @@ class CVGeneratorService:
 
         # 1. Limpieza de caracteres "peligrosos" o no imprimibles
         clean_job_description = self._sanitize_text(self.job_description)
-        language_map = {
-            'es': 'Español',
-            'en': 'Inglés',
-            'fr': 'Francés'
-        }
+        language_map = {'es': 'Español', 'en': 'Inglés', 'fr': 'Francés'}
         target_language = language_map.get(self.language)
-        system_prompt = f"""
+        system_prompt = (
+            f"""
         Eres un experto reclutador de TI y especialista en redacción de CVs optimizados para ATS.
         
         TU MISIÓN: 
@@ -84,7 +91,8 @@ class CVGeneratorService:
         
         SALIDA JSON OBLIGATORIA:
         Debes responder EXCLUSIVAMENTE con un JSON válido siguiendo esta estructura exacta:
-        """ + """
+        """
+            + """
         {
             "job_title_target": "String",
             "profile_summary": "String",
@@ -123,6 +131,7 @@ class CVGeneratorService:
             ]
         }
         """
+        )
 
         # Filtramos datos sensibles antes de enviarlos a la IA (Privacidad)
         # La IA no necesita saber el teléfono o email para optimizar el texto
@@ -140,15 +149,15 @@ class CVGeneratorService:
             model=settings.AI_MODEL,
             # Headers requeridos/recomendados por OpenRouter para rankings
             extra_headers={
-                "HTTP-Referer": "http://localhost:8000", # Pon la URL de tu app (o localhost en dev)
-                "X-Title": "HirePilot",            # El nombre de tu App
+                'HTTP-Referer': 'http://localhost:8000',  # Pon la URL de tu app (o localhost en dev)
+                'X-Title': 'HirePilot',  # El nombre de tu App
             },
-            response_format={"type": "json_object"}, # FUERZA LA SALIDA JSON
+            response_format={'type': 'json_object'},  # FUERZA LA SALIDA JSON
             messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message}
+                {'role': 'system', 'content': system_prompt},
+                {'role': 'user', 'content': user_message},
             ],
-            temperature=0.5
+            temperature=0.5,
         )
 
         # Parseamos la respuesta de texto a Diccionario Python
@@ -157,10 +166,11 @@ class CVGeneratorService:
 
     def _sanitize_text(self, text):
         """
-        Normaliza el texto para eliminar caracteres de control extraños 
+        Normaliza el texto para eliminar caracteres de control extraños
         que a veces vienen de copiar/pegar de PDFs, pero MANTIENE los acentos.
         """
-        if not text: return ""
+        if not text:
+            return ''
         # Normaliza unicode (NFC es estándar para web)
         return unicodedata.normalize('NFC', text)
 
@@ -169,43 +179,49 @@ class CVGeneratorService:
         Extrae datos y convierte fechas a String (YYYY-MM-DD)
         """
         profile = UserProfile.objects.filter(user=self.user).first()
-        
+
         # --- EXPERIENCIA ---
         experiences = []
         for exp in WorkExperience.objects.filter(user=self.user):
-            experiences.append({
-                "company": exp.company,
-                "role": exp.role,
-                "start_date": exp.start_date.strftime('%Y-%m-%d') if exp.start_date else None,
-                "end_date": exp.end_date.strftime('%Y-%m-%d') if exp.end_date else None,
-                "current_job": exp.current_job,
-                "description": exp.description,
-                "location": exp.location
-            })
+            experiences.append(
+                {
+                    'company': exp.company,
+                    'role': exp.role,
+                    'start_date': exp.start_date.strftime('%Y-%m-%d') if exp.start_date else None,
+                    'end_date': exp.end_date.strftime('%Y-%m-%d') if exp.end_date else None,
+                    'current_job': exp.current_job,
+                    'description': exp.description,
+                    'location': exp.location,
+                }
+            )
 
         # --- EDUCACIÓN ---
         educations = []
         for edu in Education.objects.filter(user=self.user):
-            educations.append({
-                "institution": edu.institution,
-                "degree": edu.degree,
-                "field_of_study": edu.field_of_study,
-                "start_date": edu.start_date.strftime('%Y-%m-%d') if edu.start_date else None,
-                "end_date": edu.end_date.strftime('%Y-%m-%d') if edu.end_date else None,
-                "current": edu.current
-            })
+            educations.append(
+                {
+                    'institution': edu.institution,
+                    'degree': edu.degree,
+                    'field_of_study': edu.field_of_study,
+                    'start_date': edu.start_date.strftime('%Y-%m-%d') if edu.start_date else None,
+                    'end_date': edu.end_date.strftime('%Y-%m-%d') if edu.end_date else None,
+                    'current': edu.current,
+                }
+            )
 
         # --- PROYECTOS ---
         projects = []
         for proj in Project.objects.filter(user=self.user):
             tech_stack = [skill.name for skill in proj.skills.all()]
-            projects.append({
-                "title": proj.title,
-                "role": proj.role,
-                "description": proj.description,
-                "technologies": tech_stack,
-                "link": proj.project_url or proj.resource_url or ""
-            })
+            projects.append(
+                {
+                    'title': proj.title,
+                    'role': proj.role,
+                    'description': proj.description,
+                    'technologies': tech_stack,
+                    'link': proj.project_url or proj.resource_url or '',
+                }
+            )
 
         # --- SKILLS ---
         skills = list(Skill.objects.filter(user=self.user).values_list('name', flat=True))
@@ -213,65 +229,71 @@ class CVGeneratorService:
         # --- IDIOMAS (Nuevo) ---
         languages = []
         for lang in Language.objects.filter(user=self.user):
-            languages.append({
-                "name": lang.language,
-                "proficiency": lang.level or "",
-                "certificate_by": lang.certificate  or "" 
-            })
+            languages.append(
+                {
+                    'name': lang.language,
+                    'proficiency': lang.level or '',
+                    'certificate_by': lang.certificate or '',
+                }
+            )
 
         # --- CERTIFICADOS (Nuevo) ---
         certificates = []
-        if 'Certificate' in globals(): 
+        if 'Certificate' in globals():
             for cert in Certificate.objects.filter(user=self.user):
-                certificates.append({
-                    "name": cert.name,
-                    "issuer": cert.issuing_organization,
-                    "date": cert.issue_date.strftime('%Y-%m-%d') if cert.issue_date else None,
-                    "description": cert.description or ""
-                })
+                certificates.append(
+                    {
+                        'name': cert.name,
+                        'issuer': cert.issuing_organization,
+                        'date': cert.issue_date.strftime('%Y-%m-%d') if cert.issue_date else None,
+                        'description': cert.description or '',
+                    }
+                )
 
         return {
-            "personal_info": {
-                "firstName": self.user.first_name,
-                "lastName": self.user.last_name,
-                "profession": profile.headline if profile else "",
-                "email": self.user.email,
-                "phone": profile.phone if profile else "",
-                "linkedin": profile.linkedin_url if profile else "",
-                "website": profile.personal_website if profile else "",
+            'personal_info': {
+                'firstName': self.user.first_name,
+                'lastName': self.user.last_name,
+                'profession': profile.headline if profile else '',
+                'email': self.user.email,
+                'phone': profile.phone if profile else '',
+                'linkedin': profile.linkedin_url if profile else '',
+                'website': profile.personal_website if profile else '',
             },
-            "experience": experiences,
-            "education": educations,
-            "skills": skills,
-            "projects": projects,
-            "languages": languages,
-            "certificates": certificates
+            'experience': experiences,
+            'education': educations,
+            'skills': skills,
+            'projects': projects,
+            'languages': languages,
+            'certificates': certificates,
         }
 
     def _mock_ai_logic(self, user_data):
         # MANTENEMOS ESTO COMO RESPALDO (FALLBACK)
         selected_skills = user_data['skills'][:5] if user_data['skills'] else []
-        
+
         processed_experience = []
         for exp in user_data['experience']:
-            processed_experience.append({
-                "company": exp['company'],
-                "position": exp['role'],
-                "date_range": f"{exp['start_date']} - ...",
-                "location": exp['location'],
-                "enhanced_description": [
-                    f"Gestión experta en {exp['company']} (Mock Generated).",
-                    f"Logro destacado relacionado con la oferta."
-                ]
-            })
+            processed_experience.append(
+                {
+                    'company': exp['company'],
+                    'position': exp['role'],
+                    'date_range': f'{exp["start_date"]} - ...',
+                    'location': exp['location'],
+                    'enhanced_description': [
+                        f'Gestión experta en {exp["company"]} (Mock Generated).',
+                        'Logro destacado relacionado con la oferta.',
+                    ],
+                }
+            )
 
         return {
-            "job_title_target": "Puesto Objetivo (Mock)",
-            "profile_summary": "Resumen generado automáticamente por el sistema de respaldo.",
-            "selected_skills": selected_skills,
-            "selected_languages": user_data.get('languages', []),
-            "experience": processed_experience,
-            "education": user_data['education'], 
-            "projects": user_data['projects'],
-            "certificates": user_data.get('certificates', [])
+            'job_title_target': 'Puesto Objetivo (Mock)',
+            'profile_summary': 'Resumen generado automáticamente por el sistema de respaldo.',
+            'selected_skills': selected_skills,
+            'selected_languages': user_data.get('languages', []),
+            'experience': processed_experience,
+            'education': user_data['education'],
+            'projects': user_data['projects'],
+            'certificates': user_data.get('certificates', []),
         }

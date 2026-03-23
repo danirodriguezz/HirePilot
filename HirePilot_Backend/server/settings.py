@@ -10,9 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
-from pathlib import Path
 import os
 from datetime import timedelta
+from pathlib import Path
+
 from dotenv import load_dotenv
 
 # Cargar variables de entorno desde el .env
@@ -49,7 +50,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'accounts',
-    'cv_generator'
+    'cv_generator',
 ]
 
 REST_FRAMEWORK = {
@@ -60,7 +61,7 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
         'rest_framework.renderers.BrowsableAPIRenderer',
         'rest_framework.permissions.IsAuthenticated',
-    ]
+    ],
 }
 
 SIMPLE_JWT = {
@@ -110,11 +111,11 @@ WSGI_APPLICATION = 'server.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': os.getenv('DB_ENGINE'),
-        'NAME': os.getenv('DB_NAME'),      
-        'USER': os.getenv('DB_USER'),             
-        'PASSWORD': os.getenv('DB_PASSWORD'),         
-        'HOST': os.getenv('DB_HOST'),         
-        'PORT': os.getenv('DB_PORT'),              
+        'NAME': os.getenv('DB_NAME'),
+        'USER': os.getenv('DB_USER'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'HOST': os.getenv('DB_HOST'),
+        'PORT': os.getenv('DB_PORT'),
     }
 }
 
@@ -161,8 +162,8 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Tu frontend local en Vite
-    "http://127.0.0.1:5173",  # Alternativa local común
+    'http://localhost:5173',  # Tu frontend local en Vite
+    'http://127.0.0.1:5173',  # Alternativa local común
     # "https://tu-dominio-en-produccion.com", # <--- Descomenta esto cuando subas a prod
 ]
 
