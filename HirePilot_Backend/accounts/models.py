@@ -33,7 +33,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
 
     # Campos específicos de tu diagrama
-    is_verified = models.BooleanField(default=False)
+    is_verified = models.BooleanField(default=True)
     plan = models.CharField(max_length=10, choices=Plan.choices, default=Plan.FREE)
 
     objects = CustomUserManager()

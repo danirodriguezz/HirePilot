@@ -173,10 +173,5 @@ CORS_ALLOW_CREDENTIALS = True
 # 60 segundos * 60 minutos * 24 horas = 86400
 PASSWORD_RESET_TIMEOUT = 86400
 
-# Configuración de Email para Desarrollo (Imprime en consola)
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-# Cuando pases a producción, cambiarás esto por SMTP (Gmail, SendGrid, AWS SES)
-DEFAULT_FROM_EMAIL = 'noreply@hirepilot.com'
-
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 AI_MODEL = os.getenv('AI_MODEL')  # Puedes cambiar el modelo por defecto aquí

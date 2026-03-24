@@ -52,10 +52,6 @@ const router = createBrowserRouter([
       {
         path: routes.register,
         element: <AuthPages.RegisterPage />
-      },
-      {
-        path: routes.verifyEmail,
-        element: <AuthPages.VerifyEmail />,
       }
     ]
   },

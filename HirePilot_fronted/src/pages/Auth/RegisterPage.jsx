@@ -183,13 +183,14 @@ const RegisterPage = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50 flex items-center justify-center px-4 py-12">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
           <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <i className="fas fa-envelope-open-text text-4xl text-emerald-600"></i>
+            {/* Cambiamos el icono a un check */}
+            <i className="fas fa-check-circle text-4xl text-emerald-600"></i>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">¡Casi estamos listos!</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">¡Registro exitoso!</h2>
           <p className="text-gray-600 mb-6">
-            Hemos enviado un correo de confirmación a <strong>{formData.email}</strong>.
+            Tu cuenta ha sido creada correctamente. 
             <br /><br />
-            Por favor, haz clic en el enlace del correo para activar tu cuenta y empezar a usar la plataforma.
+            Ya puedes iniciar sesión para acceder a la plataforma y explorar todas las funciones.
           </p>
           <Link
             to={routes.login}

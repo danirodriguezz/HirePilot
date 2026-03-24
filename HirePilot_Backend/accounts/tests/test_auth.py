@@ -1,19 +1,15 @@
 import pytest
 from django.contrib.auth import get_user_model
-from django.contrib.auth.tokens import default_token_generator
 from django.core import mail
 from django.urls import reverse
-from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode
 
 User = get_user_model()
 
 
 @pytest.mark.django_db
 class TestAuthenticationFlow:
-    def test_registration_sends_email(self, api_client):
-        """Prueba que registrarse crea el usuario inactivo y envía correo"""
-        # Cambia 'register' por el nombre exacto que tengas en tu urls.py si es diferente
+    def test_registration_creates_verified_user(self, api_client):
+        """Prueba que registrarse crea el usuario directamente verificado (Hackathon mode) y sin correo"""
         url = reverse('register')
         data = {
             'first_name': 'Test',
@@ -24,7 +20,7 @@ class TestAuthenticationFlow:
             'profession': 'Dev',
             'experience': '1-2',
             'industry': 'TECH',
-            'plan': 'BASIC',  # Añadido por si tu serializador lo requiere
+            'plan': 'BASIC',
         }
 
         response = api_client.post(url, data)
@@ -32,44 +28,24 @@ class TestAuthenticationFlow:
         assert response.status_code == 201
         assert User.objects.count() == 1
         user = User.objects.get(email='test@example.com')
-        assert user.is_verified is False  # Importante: Nace sin verificar
-
-        # Verificar que se envió el email
-        assert len(mail.outbox) == 1
-        # Verifica que parte del asunto o cuerpo coincida
-        # (Ajusta este string según el Asunto real que envíe tu función send_verification_email)
-        assert len(mail.outbox[0].subject) > 0
-
-    def test_verify_email_logic(self, api_client):
-        """Prueba manual del endpoint de verificación"""
-        # 1. Crear usuario manual
-        user = User.objects.create_user(email='verify@test.com', password='pwd')
-        user.is_verified = False
-        user.save()
-
-        # 2. Generar token válido (simulando lo que hace el utils.py)
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        token = default_token_generator.make_token(user)
-
-        # 3. Llamar al endpoint
-        url = reverse('verify-email')  # Asegúrate del name en urls.py
-        response = api_client.post(url, {'uid': uid, 'token': token})
-
-        assert response.status_code == 200
-
-        user.refresh_from_db()
+        
+        # NUEVO: Comprobamos que nace verificado directamente
         assert user.is_verified is True
 
+        # NUEVO: Verificar que NO se ha enviado ningún email de verificación
+        assert len(mail.outbox) == 0
+
+    # ⚠️ ELIMINADO: test_verify_email_logic ya no es necesario
+
     def test_login_blocked_if_unverified(self, api_client):
-        """El login debe fallar si is_verified es False"""
+        """El login debe fallar si is_verified es False (por si algún admin lo deshabilita manualmente)"""
+        # Aunque por defecto sean True, seguimos probando que la seguridad del login exista
         User.objects.create_user(email='no@verify.com', password='Password123!', is_verified=False)
 
-        # Asumiendo que 'token_obtain_pair' es el nombre de tu vista CustomTokenObtainPairView
         url = reverse('token_obtain_pair')
         response = api_client.post(url, {'email': 'no@verify.com', 'password': 'Password123!'})
 
         assert response.status_code == 401
-        # Ajusta este string al mensaje exacto que devuelve tu serializador personalizado
         assert 'no ha sido verificada' in str(response.data)
 
     def test_login_success_and_secure_cookie(self, api_client):
@@ -114,10 +90,8 @@ class TestAuthenticationFlow:
 
         # 3. Llamamos al endpoint de refresh sin enviar datos en el body,
         # la cookie 'refresh_token' viaja sola en las cabeceras de la petición.
-        refresh_url = reverse('token_refresh')  # Ajusta al nombre real de tu url
+        refresh_url = reverse('token_refresh')  
         response = api_client.post(refresh_url, {})
 
-        # Si tu CustomTokenRefreshView inyecta correctamente la cookie en request.data,
-        # esto devolverá 200 y un nuevo token de acceso.
         assert response.status_code == 200
         assert 'access' in response.data

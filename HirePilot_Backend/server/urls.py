@@ -47,7 +47,6 @@ urlpatterns = [
     ),
     path('api/me/', views.ManageUserView.as_view(), name='me'),
     path('api/logout/', views.LogoutView.as_view(), name='logout'),
-    path('api/verify-email/', views.VerifyEmailView.as_view(), name='verify-email'),
     path('api/', include(router.urls)),
     path('api/cv/', include('cv_generator.urls')),
 ]
