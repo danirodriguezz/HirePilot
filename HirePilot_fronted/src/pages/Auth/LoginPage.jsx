@@ -187,23 +187,6 @@ const LoginPage = () => {
               {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
             </div>
 
-            {/* Recordarme y Olvidé contraseña */}
-            <div className="flex items-center justify-between">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  name="rememberMe"
-                  checked={formData.rememberMe}
-                  onChange={handleChange}
-                  className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
-                />
-                <span className="ml-2 text-sm text-gray-600">Recordarme</span>
-              </label>
-              <Link to="/forgot-password" className="text-sm text-emerald-600 hover:text-emerald-700">
-                ¿Olvidaste tu contraseña?
-              </Link>
-            </div>
-
             {/* Botón de login */}
             <button
               type="submit"

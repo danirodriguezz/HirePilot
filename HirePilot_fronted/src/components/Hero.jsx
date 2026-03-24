@@ -10,8 +10,8 @@ const Hero = () => {
   }
 
   const handleViewRepo = () => {
-    alert("Aquí podrías enlazar al repositorio de GitHub del proyecto.")
-  }
+    window.open("https://github.com/danirodriguezz/hirepilot", "_blank", "noopener,noreferrer");
+  };
 
   return (
     <section className="py-20 px-4 pt-32">
