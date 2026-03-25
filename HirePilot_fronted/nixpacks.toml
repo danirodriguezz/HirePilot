@@ -1,0 +1,15 @@
+# Proveedor y versión de Node (opcional, Nixpacks lo suele detectar solo)
+[providers]
+node = "18"
+
+# Fase 1: Instalación de dependencias
+[phases.install]
+cmds = ["npm install"]
+
+# Fase 2: Construcción (Build)
+[phases.build]
+cmds = ["npm run build"]
+
+# Fase 3: Comando de arranque (Cuando termina de montar el servicio)
+[start]
+cmd = "npx serve -s dist -l 3000"
