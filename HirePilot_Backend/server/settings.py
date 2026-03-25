@@ -166,7 +166,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',  # Tu frontend local en Vite
     'http://127.0.0.1:5173',  # Alternativa local común
-    'https://hirepilot-fronted-kv7vy4-f12a19-45-90-237-162.traefik.me/',
+    'https://hirepilot-fronted-kv7vy4-f12a19-45-90-237-162.traefik.me',
 ]
 
 CORS_ALLOW_CREDENTIALS = True
