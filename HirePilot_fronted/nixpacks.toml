@@ -1,6 +1,9 @@
-# Proveedor y versión de Node (opcional, Nixpacks lo suele detectar solo)
-[providers]
-node = "18"
+# Proveedores que va a usar Nixpacks (debe ser una lista/array)
+providers = ["node"]
+
+# Opcional: Especificar la versión exacta de Node
+[variables]
+NIXPACKS_NODE_VERSION = "18"
 
 # Fase 1: Instalación de dependencias
 [phases.install]
