@@ -102,7 +102,7 @@ const ExperienceSection = ({ data, onUpdate }) => {
       startDate: "",
       endDate: "",
       current: false,
-      achievements: [""],
+      achievements: [],
     }
     setExperiences([newExperience, ...experiences])
   }

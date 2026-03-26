@@ -1,13 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react" // Importar useEffect
+import { useState, useEffect } from "react"
 
 const JobDescriptionSection = ({ jobDescription, onUpdate }) => {
   const [description, setDescription] = useState(jobDescription || "")
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [analysis, setAnalysis] = useState(null)
 
-  // NUEVO: Sincronizar estado local si la prop cambia desde el padre
+  // Sincronizar estado local si la prop cambia desde el padre
   useEffect(() => {
     setDescription(jobDescription || "")
   }, [jobDescription])
@@ -16,26 +14,6 @@ const JobDescriptionSection = ({ jobDescription, onUpdate }) => {
     const value = e.target.value
     setDescription(value)
     onUpdate(value) // Actualizar estado en Dashboard (padre)
-  }
-
-  // ... (El resto de la lógica de análisis mockup se puede mantener o quitar según prefieras)
-  const analyzeJobDescription = async () => {
-    if (!description.trim()) return
-
-    setIsAnalyzing(true)
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-      // Mock analysis...
-      setAnalysis({
-        keywords: ["Python", "Django", "React", "REST API"],
-        requirements: ["Experiencia backend", "Inglés B2"],
-        recommendations: ["Resalta tus proyectos API", "Menciona uso de Docker"]
-      })
-    } catch (error) {
-      console.error("Error analizando:", error)
-    } finally {
-      setIsAnalyzing(false)
-    }
   }
 
   return (
@@ -49,7 +27,9 @@ const JobDescriptionSection = ({ jobDescription, onUpdate }) => {
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Oferta de Trabajo</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Oferta de Trabajo
+          </label>
           <textarea
             value={description}
             onChange={handleChange}
@@ -61,27 +41,6 @@ const JobDescriptionSection = ({ jobDescription, onUpdate }) => {
             {description.length} caracteres
           </p>
         </div>
-
-        {/* Botón opcional de análisis previo */}
-        {description.trim() && (
-          <div className="flex gap-3">
-             <button
-              onClick={analyzeJobDescription}
-              disabled={isAnalyzing}
-              className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
-            >
-              <i className="fas fa-search-plus"></i>
-              {isAnalyzing ? "Analizando palabras clave..." : "Analizar palabras clave (Opcional)"}
-            </button>
-          </div>
-        )}
-
-        {/* Visualización del análisis mock (opcional) */}
-        {analysis && (
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-100 rounded text-sm text-blue-800">
-            <strong>Keywords detectadas:</strong> {analysis.keywords.join(", ")}
-          </div>
-        )}
       </div>
     </div>
   )
