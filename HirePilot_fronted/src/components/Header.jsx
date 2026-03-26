@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom"
 const Header = ({ isScrolled }) => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  
+
   // 1. Añadimos el estado para saber si el usuario está autenticado
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
@@ -54,9 +54,8 @@ const Header = ({ isScrolled }) => {
     if (isAuthenticated) {
       return (
         <button
-          className={`bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold transition-colors ${
-            isMobile ? "w-full py-2 px-5 mt-2" : "px-5 py-2"
-          }`}
+          className={`bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold transition-colors ${isMobile ? "w-full py-2 px-5 mt-2" : "px-5 py-2"
+            }`}
           onClick={() => {
             setIsMobileMenuOpen(false)
             navigate(routes.dashboard || "/dashboard")
@@ -71,9 +70,8 @@ const Header = ({ isScrolled }) => {
     return (
       <>
         <button
-          className={`bg-white border border-emerald-600 text-emerald-600 rounded-lg font-semibold transition-colors hover:bg-emerald-50 ${
-            isMobile ? "w-full py-2 px-5 mb-2 mt-2" : "px-5 py-2"
-          }`}
+          className={`bg-white border border-emerald-600 text-emerald-600 rounded-lg font-semibold transition-colors hover:bg-emerald-50 ${isMobile ? "w-full py-2 px-5 mb-2 mt-2" : "px-5 py-2"
+            }`}
           onClick={() => {
             setIsMobileMenuOpen(false)
             navigate(routes.login)
@@ -82,9 +80,8 @@ const Header = ({ isScrolled }) => {
           Iniciar Sesión
         </button>
         <button
-          className={`bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold transition-colors ${
-            isMobile ? "w-full py-2 px-5" : "px-5 py-2"
-          }`}
+          className={`bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold transition-colors ${isMobile ? "w-full py-2 px-5" : "px-5 py-2"
+            }`}
           onClick={() => {
             setIsMobileMenuOpen(false)
             navigate(routes.register)
@@ -98,9 +95,7 @@ const Header = ({ isScrolled }) => {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 border-b backdrop-blur-sm transition-all duration-300 ${
-        isScrolled ? "bg-white/95" : "bg-white/80"
-      }`}
+      className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm transition-all duration-300"
     >
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center space-x-2" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} style={{ cursor: 'pointer' }}>
@@ -134,7 +129,7 @@ const Header = ({ isScrolled }) => {
           <nav className="absolute top-full left-0 right-0 bg-white flex flex-col py-4 shadow-lg lg:hidden">
             <button className="text-gray-600 hover:text-emerald-600 transition-colors font-medium py-2 px-4" onClick={() => scrollToSection("servicios")}>Tecnología</button>
             <button className="text-gray-600 hover:text-emerald-600 transition-colors font-medium py-2 px-4" onClick={() => scrollToSection("como-funciona")}>Cómo Funciona</button>
-            
+
             {/* 5. Usamos el componente AuthButtons para Mobile */}
             <div className="flex flex-col px-4 border-t border-gray-100 mt-2 pt-2">
               <AuthButtons isMobile={true} />
