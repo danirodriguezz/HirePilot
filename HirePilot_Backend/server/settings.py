@@ -164,12 +164,19 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173',  # Tu frontend local en Vite
-    'http://127.0.0.1:5173',  # Alternativa local común
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
     'https://hirepilot.dev',
+    'https://www.hirepilot.dev',
+    'https://hirepilot-fronted-kv7vy4-f12a19-45-90-237-162.traefik.me',
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+
+SESSION_COOKIE_DOMAIN = '.hirepilot.dev'
+CSRF_COOKIE_DOMAIN = '.hirepilot.dev'
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
 
 # Define la vida útil del token en SEGUNDOS.
 # 60 segundos * 60 minutos * 24 horas = 86400
