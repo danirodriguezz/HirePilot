@@ -7,13 +7,36 @@ import CustomDatePicker from "../ui/CustomDatePicker" // <--- Importado OK
 import toast from "react-hot-toast"
 
 const EducationSection = ({ data, onUpdate }) => {
-  const [educationList, setEducationList] = useState([])
+  const [educationList, setEducationList] = useState(data || [])
   
   // Estados para el Modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [itemToDelete, setItemToDelete] = useState(null)
 
-  // 1. Cargar datos al iniciar
+  // 1. LÓGICA DE DIRTY STATE (Cambios sin guardar)
+  // Comprueba si una educación individual tiene cambios
+  const isEducationDirty = (edu) => {
+    const original = data.find(d => d.id === edu.id)
+    if (!original) return true // Es un borrador nuevo
+    return JSON.stringify(edu) !== JSON.stringify(original)
+  }
+
+  // Comprueba si HAY ALGUNA educación en toda la lista con cambios
+  const isAnyDirty = educationList.some(isEducationDirty)
+
+  // Evitar que cierre la pestaña si hay cambios sin guardar
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (isAnyDirty) {
+        e.preventDefault()
+        e.returnValue = "" 
+      }
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  }, [isAnyDirty])
+
+  // Cargar datos al iniciar o cuando el padre actualiza
   useEffect(() => {
     setEducationList(data)
   }, [data])
@@ -24,21 +47,19 @@ const EducationSection = ({ data, onUpdate }) => {
       const payload = mapToBackend(eduLocal)
       let savedDataBackend;
 
-      if (eduLocal.id && typeof eduLocal.id !== 'number') {
+      // Mejor verificación de IDs temporales (Igual que hicimos en Experiencia)
+      if (eduLocal.id && typeof eduLocal.id === 'string' && eduLocal.id.startsWith('temp-')) {
          savedDataBackend = await educationService.create(payload)
       } else {
          savedDataBackend = await educationService.update(eduLocal.id, payload)
       }
 
-      // 2. Convertir respuesta a Frontend
       const savedDataFrontend = mapToFrontendEducation(savedDataBackend)
 
-      // 3. Actualizar Estado Local
       const newList = educationList.map(e => 
         e.id === eduLocal.id ? savedDataFrontend : e
       )
       setEducationList(newList)
-      // Actualizar en el padre
       onUpdate(newList)
       return savedDataFrontend
     }
@@ -61,13 +82,12 @@ const EducationSection = ({ data, onUpdate }) => {
     setIsDeleteModalOpen(false)
 
     const id = itemToDelete
-    const isTemp = typeof id !== 'number'
+    const isTemp = typeof id === 'string' && id.startsWith('temp-')
 
     const deleteAction = async () => {
       if (!isTemp) await educationService.delete(id)
       const newList = educationList.filter(e => e.id !== id)
       setEducationList(newList)
-      // Actualizar en el padre
       onUpdate(newList)
     }
 
@@ -107,7 +127,7 @@ const EducationSection = ({ data, onUpdate }) => {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border p-4 sm:p-6 text-sm sm:text-base">
+    <div className="bg-white rounded-lg shadow-sm border p-4 sm:p-6 text-sm sm:text-base space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Educación</h2>
@@ -115,7 +135,7 @@ const EducationSection = ({ data, onUpdate }) => {
         </div>
         <button
           onClick={handleAddEducation}
-          className="w-full sm:w-auto justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md transition-colors flex items-center gap-2"
+          className="w-full sm:w-auto justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md transition-colors flex items-center gap-2 shadow-sm"
         >
           <i className="fas fa-plus"></i>
           Añadir Educación
@@ -137,138 +157,177 @@ const EducationSection = ({ data, onUpdate }) => {
         </div>
       ) : (
         <div className="space-y-6">
-          {educationList.map((edu, index) => (
-            <div key={edu.id} className="border border-gray-200 rounded-lg p-6 relative">
-              
-              <div className="flex justify-between items-start mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Educación {educationList.length - index}</h3>
-                <button 
-                  onClick={() => openDeleteModal(edu.id)} 
-                  className="text-red-600 hover:text-red-700 p-2 transition-colors"
-                  title="Eliminar"
-                >
-                  <i className="fas fa-trash"></i>
-                </button>
-              </div>
+          {educationList.map((edu, index) => {
+            
+            // Calculamos si ESTA tarjeta tiene cambios
+            const isDirty = isEducationDirty(edu);
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Institución</label>
-                  <input
-                    type="text"
-                    value={edu.institution}
-                    onChange={(e) => handleChange(edu.id, "institution", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    placeholder="Universidad o centro"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Título</label>
-                  <input
-                    type="text"
-                    value={edu.degree}
-                    onChange={(e) => handleChange(edu.id, "degree", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    placeholder="Ej: Grado, Máster..."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Campo de estudio</label>
-                  <input
-                    type="text"
-                    value={edu.field}
-                    onChange={(e) => handleChange(edu.id, "field", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    placeholder="Ej: Informática, Derecho..."
-                  />
-                </div>
+            return (
+              <div 
+                key={edu.id} 
+                className={`border rounded-lg p-6 relative transition-all duration-300 ${
+                  isDirty ? "border-amber-400 ring-1 ring-amber-400/50 pb-24 md:pb-6" : "border-gray-200"
+                }`}
+              >
                 
-                {/* --- SECCIÓN FECHAS CORREGIDA --- */}
-                
-                {/* 1. Fecha de Inicio */}
-                <div>
-                  <CustomDatePicker 
-                      label="Fecha de inicio"
-                      value={edu.startDate}
-                      onChange={(val) => handleChange(edu.id, "startDate", val)}
-                      showMonthYearPicker={true} 
-                      placeholder="Seleccionar inicio"
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="text-lg font-medium text-gray-900">
+                    Educación {educationList.length - index}
+                    {isDirty && <span className="ml-2 text-xs text-amber-600 font-normal italic">*Modificado</span>}
+                  </h3>
+                  <button 
+                    onClick={() => openDeleteModal(edu.id)} 
+                    className="text-red-600 hover:text-red-700 p-2 transition-colors"
+                    title="Eliminar"
+                  >
+                    <i className="fas fa-trash"></i>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Institución</label>
+                    <input
+                      type="text"
+                      value={edu.institution}
+                      onChange={(e) => handleChange(edu.id, "institution", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      placeholder="Universidad o centro"
                     />
-                </div>
+                  </div>
 
-                {/* 2. Fecha de Fin (Si no estudia actualmente) */}
-                {!edu.current ? (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Título</label>
+                    <input
+                      type="text"
+                      value={edu.degree}
+                      onChange={(e) => handleChange(edu.id, "degree", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      placeholder="Ej: Grado, Máster..."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Campo de estudio</label>
+                    <input
+                      type="text"
+                      value={edu.field}
+                      onChange={(e) => handleChange(edu.id, "field", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      placeholder="Ej: Informática, Derecho..."
+                    />
+                  </div>
+                  
+                  {/* Espacio alineación Desktop */}
+                  <div className="hidden md:block"></div>
+
+                  {/* Fechas */}
                   <div>
                     <CustomDatePicker 
-                        label="Fecha de fin"
-                        value={edu.endDate}
-                        onChange={(val) => handleChange(edu.id, "endDate", val)}
-                        showMonthYearPicker={true}
-                        placeholder="Seleccionar fin"
-                        minDate={edu.startDate ? new Date(edu.startDate) : null}
+                        label="Fecha de inicio"
+                        value={edu.startDate}
+                        onChange={(val) => handleChange(edu.id, "startDate", val)}
+                        showMonthYearPicker={true} 
+                        placeholder="Seleccionar inicio"
                       />
                   </div>
-                ) : (
-                  // Espacio vacío para mantener el grid alineado si solo hay fecha de inicio
-                  <div className="hidden md:block"></div>
-                )}
 
-                {/* 3. Checkbox "Estudiando actualmente" */}
-                <div className="md:col-span-2 flex items-center mt-2">
-                    <label className="flex items-center cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={edu.current}
-                        onChange={(e) => {
-                            handleChange(edu.id, "current", e.target.checked);
-                            if (e.target.checked) handleChange(edu.id, "endDate", ""); // Limpiar fecha fin
-                        }}
-                        className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
-                      />
-                      <span className="ml-2 text-sm text-gray-700">Estudiando actualmente</span>
-                    </label>
+                  {!edu.current ? (
+                    <div>
+                      <CustomDatePicker 
+                          label="Fecha de fin"
+                          value={edu.endDate}
+                          onChange={(val) => handleChange(edu.id, "endDate", val)}
+                          showMonthYearPicker={true}
+                          placeholder="Seleccionar fin"
+                          minDate={edu.startDate ? new Date(edu.startDate) : null}
+                        />
+                    </div>
+                  ) : (
+                    <div className="hidden md:block"></div>
+                  )}
+
+                  <div className="md:col-span-2 flex items-center mt-2">
+                      <label className="flex items-center cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={edu.current}
+                          onChange={(e) => {
+                              handleChange(edu.id, "current", e.target.checked);
+                              if (e.target.checked) handleChange(edu.id, "endDate", ""); 
+                          }}
+                          className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
+                        />
+                        <span className="ml-2 text-sm text-gray-700">Estudiando actualmente</span>
+                      </label>
+                  </div>
+
+                  {/* Nota media */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Nota media (Opcional)</label>
+                    <input
+                      type="text"
+                      value={edu.gpa}
+                      onChange={(e) => handleChange(edu.id, "gpa", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      placeholder="Ej: 8.5/10"
+                    />
+                  </div>
+
+                  {/* Descripción */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Descripción (Opcional)</label>
+                    <textarea
+                      value={edu.description}
+                      onChange={(e) => handleChange(edu.id, "description", e.target.value)}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      placeholder="Logros académicos, tesis, actividades..."
+                    />
+                  </div>
+                </div> {/* <--- FIN DEL GRID DE INPUTS */}
+
+                {/* FOOTER DE LA TARJETA (Sticky bar igual que Profile/Experience) */}
+                <div
+                  className={`flex items-center justify-between transition-all duration-300
+                    ${isDirty
+                      // MÓVIL: Fijo en la parte inferior
+                      ? "fixed bottom-0 left-0 w-full z-50 p-4 bg-white/95 backdrop-blur-sm border-t border-amber-200 shadow-[0_-8px_15px_rgba(0,0,0,0.08)] " +
+                      // ESCRITORIO (md): Estático dentro de la tarjeta
+                      "md:static md:w-auto md:bg-amber-50/50 md:p-4 md:-mx-6 md:-mb-6 md:rounded-b-lg md:shadow-none mt-0 md:mt-6 md:border-t-0"
+                      // ESTADO GUARDADO: Diseño normal
+                      : "mt-6 pt-4 border-t border-gray-100"
+                    }
+                  `}
+                >
+                  <div>
+                    {isDirty && (
+                      <p className="text-amber-700 text-sm flex items-center animate-pulse font-medium">
+                        <i className="fas fa-circle-exclamation mr-2"></i>
+                        <span className="hidden sm:inline">Cambios sin guardar</span>
+                        <span className="sm:hidden">Sin guardar</span>
+                      </p>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => handleSave(edu)}
+                    disabled={!isDirty && edu.id} // Deshabilitado si no hay cambios reales
+                    className={`
+                        flex items-center gap-2 px-6 py-2.5 rounded-md text-white font-medium shadow-sm transition-all active:scale-95
+                        ${!isDirty 
+                          ? 'bg-emerald-600 hover:bg-emerald-700' 
+                          : 'bg-amber-600 hover:bg-amber-700 hover:shadow-md ring-2 ring-offset-1 ring-amber-600/30'
+                        }
+                      `}
+                  >
+                    <i className="fas fa-save"></i>
+                    Guardar
+                  </button>
                 </div>
-
-                {/* --- FIN SECCIÓN FECHAS --- */}
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Nota media (Opcional)</label>
-                  <input
-                    type="text"
-                    value={edu.gpa}
-                    onChange={(e) => handleChange(edu.id, "gpa", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    placeholder="Ej: 8.5/10"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Descripción (Opcional)</label>
-                  <textarea
-                    value={edu.description}
-                    onChange={(e) => handleChange(edu.id, "description", e.target.value)}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    placeholder="Logros académicos, tesis, actividades..."
-                  />
-                </div>
-
-                {/* Botón Guardar */}
-                <div className="md:col-span-2 flex justify-end border-t border-gray-100 pt-4 mt-2">
-                    <button 
-                        onClick={() => handleSave(edu)}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-md transition-all shadow-sm hover:shadow-md text-sm font-medium flex items-center gap-2"
-                    >
-                        <i className="fas fa-save"></i>
-                        Guardar cambios
-                    </button>
-                </div>
-
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

@@ -1,12 +1,28 @@
 "use client"
 
-import { useState , useEffect} from "react"
+import { useState, useEffect } from "react"
+import toast from "react-hot-toast"
 import api from "../../api/axiosInstance"
 
 const ProfileSection = ({ data, onUpdate }) => {
   const [formData, setFormData] = useState(data)
   const [saveStatus, setSaveStatus] = useState("idle") // "idle", "saving", "saved", "error"
-  
+
+  // Comprobamos si hay cambios (Dirty State)
+  const hasUnsavedChanges = JSON.stringify(formData) !== JSON.stringify(data)
+
+  // Evitar que el usuario cierre la pestaña por error si hay cambios sin guardar
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault()
+        e.returnValue = "" // Necesario para Chrome
+      }
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  }, [hasUnsavedChanges])
+
   // Esto actualiza el formulario cuando el padre termina de cargar los datos
   useEffect(() => {
     setFormData(data)
@@ -14,8 +30,10 @@ const ProfileSection = ({ data, onUpdate }) => {
 
   // [Cambio 2] Nueva función para guardar manualmente al hacer clic
   const handleSave = async () => {
+    if (!hasUnsavedChanges) return
+
     setSaveStatus("saving")
-    
+
     try {
       // Mapear datos de Frontend a Backend
       const payload = {
@@ -33,15 +51,20 @@ const ProfileSection = ({ data, onUpdate }) => {
 
       // Petición PATCH
       await api.patch("/me/", payload)
-      
+
+      onUpdate(formData)
+
       setSaveStatus("saved")
-      
+
+      toast.success("Información guardada correctamente")
+
       // Opcional: Volver al estado "idle" después de unos segundos para limpiar el mensaje de "Guardado"
       setTimeout(() => setSaveStatus("idle"), 3000)
 
     } catch (error) {
       console.error("Error al guardar perfil:", error)
       setSaveStatus("error")
+      toast.error("Hubo un error al guardar los cambios")
     }
   }
 
@@ -50,9 +73,8 @@ const ProfileSection = ({ data, onUpdate }) => {
     const { name, value } = e.target
     const updatedData = { ...formData, [name]: value }
     setFormData(updatedData)
-    onUpdate(updatedData)
     // [Cambio 3] Si editamos, quitamos el estado de "Guardado" para indicar que hay cambios pendientes
-    if (saveStatus === 'saved') setSaveStatus("idle") 
+    if (saveStatus === 'saved') setSaveStatus("idle")
   }
 
   // Opciones para el desplegable de experiencia
@@ -67,19 +89,18 @@ const ProfileSection = ({ data, onUpdate }) => {
   ]
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border p-6">
-      
+    <div
+      className={`bg-white rounded-lg shadow-sm border p-6 transition-all duration-300 ${hasUnsavedChanges
+        ? "border-amber-400 ring-1 ring-amber-400/50 pb-24 md:pb-6" // Borde ámbar brillante si hay cambios
+        : "border-gray-200"                          // Borde gris normal si está guardado
+        }`}
+    >
+
       <div className="flex justify-between items-start mb-6">
         {/* Cabecera de la tarjeta con Flexbox para alinear título y estado */}
         <div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Información Personal</h2>
           <p className="text-gray-600 text-sm">Completa tu información básica.</p>
-        </div>
-
-        {/* Indicador de Estado Visual (Opcional, puedes mantenerlo o quitarlo si prefieres solo el botón) */}
-        <div className="text-xs font-medium transition-colors mt-1">
-          {saveStatus === 'saved' && <span className="text-emerald-600 flex items-center bg-emerald-50 px-2 py-1 rounded-full"><i className="fas fa-check mr-2"></i>Guardado</span>}
-          {saveStatus === 'error' && <span className="text-red-600 flex items-center bg-red-50 px-2 py-1 rounded-full"><i className="fas fa-exclamation-circle mr-2"></i>Error</span>}
         </div>
       </div>
 
@@ -193,28 +214,55 @@ const ProfileSection = ({ data, onUpdate }) => {
           <p className="mt-1 text-sm text-gray-500">
             Un buen resumen profesional tiene entre 2-3 líneas y destaca tus principales fortalezas.
           </p>
-        </div>        
+        </div>
       </div>
 
       {/* [Cambio 4] Botón de Guardar añadido al final */}
-      <div className="mt-6 flex justify-end border-t border-gray-100 pt-4">
-        <button 
-            onClick={handleSave}
-            disabled={saveStatus === 'saving'}
-            className={`
-              flex items-center gap-2 px-6 py-2 rounded-md text-white font-medium shadow-sm transition-all
-              ${saveStatus === 'saving' ? 'bg-emerald-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 hover:shadow-md'}
+      <div
+        className={`flex items-center justify-between transition-all duration-300
+          ${hasUnsavedChanges
+            // MÓVIL: Fijo en la parte inferior de la pantalla con sombra y fondo blanco
+            ? "fixed bottom-0 left-0 w-full z-50 p-4 bg-white/95 backdrop-blur-sm border-t border-amber-200 shadow-[0_-8px_15px_rgba(0,0,0,0.08)] " +
+            // ESCRITORIO (md): Vuelve a ser estático dentro de la tarjeta
+            "md:static md:w-auto md:bg-amber-50/50 md:p-4 md:-mx-6 md:-mb-6 md:rounded-b-lg md:shadow-none mt-0 md:mt-6 md:border-t-0"
+            // ESTADO GUARDADO: Diseño normal
+            : "mt-6 pt-4 border-t border-gray-100"
+          }
+        `}
+      >
+        {/* 2. FEEDBACK VISUAL: Aviso de cambios sin guardar */}
+        <div>
+          {hasUnsavedChanges && (
+            <p className="text-amber-700 text-sm flex items-center animate-pulse font-medium">
+              <i className="fas fa-circle-exclamation mr-2"></i>
+              <span className="hidden sm:inline">Tienes cambios sin guardar</span>
+              <span className="sm:hidden">Sin guardar</span>
+            </p>
+          )}
+        </div>
+
+        <button
+          onClick={handleSave}
+          disabled={saveStatus === 'saving'}
+          className={`
+              flex items-center gap-2 px-6 py-2.5 rounded-md text-white font-medium shadow-sm transition-all active:scale-95
+              ${saveStatus === 'saving'
+              ? 'bg-emerald-400 cursor-not-allowed'
+              : hasUnsavedChanges
+                ? 'bg-amber-600 hover:bg-amber-700 hover:shadow-md ring-2 ring-offset-1 ring-amber-600/30' // Botón llama más la atención
+                : 'bg-emerald-600 hover:bg-emerald-700 hover:shadow-md'
+            }
             `}
         >
-            {saveStatus === 'saving' ? (
-              <>
-                <i className="fas fa-spinner fa-spin"></i> Guardando...
-              </>
-            ) : (
-              <>
-                <i className="fas fa-save"></i> Guardar Cambios
-              </>
-            )}
+          {saveStatus === 'saving' ? (
+            <>
+              <i className="fas fa-spinner fa-spin"></i> Guardando...
+            </>
+          ) : (
+            <>
+              <i className="fas fa-save"></i> Guardar
+            </>
+          )}
         </button>
       </div>
     </div>

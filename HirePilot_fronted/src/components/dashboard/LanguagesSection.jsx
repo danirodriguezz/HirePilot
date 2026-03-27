@@ -5,8 +5,9 @@ import { languageService, mapToBackendLenguage, mapToFrontendLanguage } from "..
 import ConfirmModal from "../ui/ConfirmModal"
 import toast from "react-hot-toast" 
 
-const LanguagesSection = ({data, onUpdate}) => {
-  const [languages, setLanguages] = useState(data)
+const LanguagesSection = ({ data, onUpdate }) => {
+  const [languages, setLanguages] = useState(data || [])
+  
   // Estados del Modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [itemToDelete, setItemToDelete] = useState(null)
@@ -22,7 +23,28 @@ const LanguagesSection = ({data, onUpdate}) => {
     { value: "Nativo", label: "Nativo / Bilingüe" },
   ]
 
-  // 1. Cargar datos
+  // 1. LÓGICA DE DIRTY STATE (Cambios sin guardar)
+  const isLanguageDirty = (lang) => {
+    const original = data.find(d => d.id === lang.id)
+    if (!original) return true // Es un borrador nuevo
+    return JSON.stringify(lang) !== JSON.stringify(original)
+  }
+
+  const isAnyDirty = languages.some(isLanguageDirty)
+
+  // Evitar que cierre la pestaña si hay cambios sin guardar
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (isAnyDirty) {
+        e.preventDefault()
+        e.returnValue = "" 
+      }
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  }, [isAnyDirty])
+
+  // Cargar datos
   useEffect(() => {
     setLanguages(data)
   }, [data])
@@ -33,11 +55,10 @@ const LanguagesSection = ({data, onUpdate}) => {
       const payload = mapToBackendLenguage(langLocal)
       let savedDataBackend;
 
-      if (langLocal.id && typeof langLocal.id !== 'number') {
-         // Crear (ID temporal)
+      // Verificación segura de ID temporal
+      if (langLocal.id && typeof langLocal.id === 'string' && langLocal.id.startsWith('temp-')) {
          savedDataBackend = await languageService.create(payload)
       } else {
-         // Actualizar (ID real)
          savedDataBackend = await languageService.update(langLocal.id, payload)
       }
 
@@ -45,6 +66,7 @@ const LanguagesSection = ({data, onUpdate}) => {
       const newList = languages.map(l => 
         l.id === langLocal.id ? savedDataFronted : l
       )
+      
       setLanguages(newList)
       onUpdate(newList) // Notificar al padre
       return savedDataBackend;
@@ -68,17 +90,13 @@ const LanguagesSection = ({data, onUpdate}) => {
     setIsDeleteModalOpen(false)
 
     const id = itemToDelete
-    const isTemp = typeof id !== 'number'
+    const isTemp = typeof id === 'string' && id.startsWith('temp-')
 
     const deleteAction = async () => {
       if (!isTemp) await languageService.delete(id)
 
       const newList = languages.filter(l => l.id !== id)
-      
-      // 3. Actualizamos el estado local
       setLanguages(newList)
-      
-      // 4. Notificamos al Dashboard (estado global)
       onUpdate(newList) 
     }
 
@@ -121,7 +139,7 @@ const LanguagesSection = ({data, onUpdate}) => {
         </div>
         <button
           onClick={addLanguage}
-          className="w-full sm:w-auto justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md transition-colors flex items-center gap-2"
+          className="w-full sm:w-auto justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md transition-colors flex items-center gap-2 shadow-sm"
         >
           <i className="fas fa-plus"></i>
           Añadir Idioma
@@ -144,73 +162,116 @@ const LanguagesSection = ({data, onUpdate}) => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {languages.map((language, index) => (
-            <div key={language.id} className="border border-gray-200 rounded-lg p-4 flex flex-col justify-between h-full">
-              {/* Contenido Superior */}
-              <div>
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">Idioma {languages.length - index}</h3>
-                  <button 
-                    onClick={() => openDeleteModal(language.id)} 
-                    className="text-red-600 hover:text-red-700 p-1 transition-colors"
-                  >
-                    <i className="fas fa-trash text-sm"></i>
-                  </button>
-                </div>
+          {languages.map((language, index) => {
+            
+            // Calculamos si ESTA tarjeta tiene cambios
+            const isDirty = isLanguageDirty(language);
 
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Idioma</label>
-                    <input
-                      type="text"
-                      value={language.name}
-                      onChange={(e) => updateLanguage(language.id, "name", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      placeholder="Ej: Inglés, Francés"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Nivel</label>
-                    <select
-                      value={language.proficiency}
-                      onChange={(e) => updateLanguage(language.id, "proficiency", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+            return (
+              <div 
+                key={language.id} 
+                className={`border rounded-lg p-4 flex flex-col justify-between h-full relative transition-all duration-300 ${
+                  isDirty ? "border-amber-400 ring-1 ring-amber-400/50 pb-24 md:pb-4" : "border-gray-200"
+                }`}
+              >
+                {/* Contenido Superior */}
+                <div>
+                  <div className="flex justify-between items-start mb-4">
+                    <h3 className="text-lg font-medium text-gray-900">
+                      Idioma {languages.length - index}
+                      {isDirty && <span className="ml-2 text-xs text-amber-600 font-normal italic">*Modificado</span>}
+                    </h3>
+                    <button 
+                      onClick={() => openDeleteModal(language.id)} 
+                      className="text-red-600 hover:text-red-700 p-1 transition-colors"
+                      title="Eliminar"
                     >
-                      {proficiencyLevels.map((level) => (
-                        <option key={level.value} value={level.value}>
-                          {level.label}
-                        </option>
-                      ))}
-                    </select>
+                      <i className="fas fa-trash text-sm"></i>
+                    </button>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Certificados (opcional)</label>
-                    <input
-                      type="text"
-                      value={language.certificates}
-                      onChange={(e) => updateLanguage(language.id, "certificates", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      placeholder="Ej: TOEFL, DELE, First..."
-                    />
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Idioma</label>
+                      <input
+                        type="text"
+                        value={language.name}
+                        onChange={(e) => updateLanguage(language.id, "name", e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        placeholder="Ej: Inglés, Francés"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Nivel</label>
+                      <select
+                        value={language.proficiency}
+                        onChange={(e) => updateLanguage(language.id, "proficiency", e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                      >
+                        {proficiencyLevels.map((level) => (
+                          <option key={level.value} value={level.value}>
+                            {level.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Certificados (opcional)</label>
+                      <input
+                        type="text"
+                        value={language.certificates}
+                        onChange={(e) => updateLanguage(language.id, "certificates", e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        placeholder="Ej: TOEFL, DELE, First..."
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Botón Guardar (Parte inferior de la tarjeta) */}
-              <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end">
-                  <button 
-                      onClick={() => handleSave(language)}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md transition-all shadow-sm hover:shadow-md text-sm font-medium flex items-center gap-2"
+                {/* FOOTER DE LA TARJETA (Sticky bar en móviles) */}
+                <div
+                  className={`flex items-center justify-between transition-all duration-300
+                    ${isDirty
+                      // MÓVIL: Fijo en la parte inferior
+                      ? "fixed bottom-0 left-0 w-full z-50 p-4 bg-white/95 backdrop-blur-sm border-t border-amber-200 shadow-[0_-8px_15px_rgba(0,0,0,0.08)] " +
+                      // ESCRITORIO (md): Estático dentro de la tarjeta (Nota el -mx-4 y -mb-4 para coincidir con el p-4 del grid)
+                      "md:static md:w-auto md:bg-amber-50/50 md:p-4 md:-mx-4 md:-mb-4 md:rounded-b-lg md:shadow-none mt-0 md:mt-4 md:border-t-0"
+                      // ESTADO GUARDADO: Diseño normal
+                      : "mt-4 pt-4 border-t border-gray-100 flex justify-end"
+                    }
+                  `}
+                >
+                  <div>
+                    {isDirty && (
+                      <p className="text-amber-700 text-sm flex items-center animate-pulse font-medium">
+                        <i className="fas fa-circle-exclamation mr-2"></i>
+                        <span className="hidden sm:inline">Cambios sin guardar</span>
+                        <span className="sm:hidden">Sin guardar</span>
+                      </p>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => handleSave(language)}
+                    disabled={!isDirty && language.id} // Deshabilitado si no hay cambios reales
+                    className={`
+                        flex items-center gap-2 px-6 py-2 rounded-md text-white font-medium shadow-sm transition-all active:scale-95
+                        ${!isDirty 
+                          ? 'bg-emerald-600 hover:bg-emerald-700' 
+                          : 'bg-amber-600 hover:bg-amber-700 hover:shadow-md ring-2 ring-offset-1 ring-amber-600/30'
+                        }
+                      `}
                   >
-                      <i className="fas fa-save"></i>
-                      Guardar
+                    <i className="fas fa-save"></i>
+                    Guardar
                   </button>
-              </div>
+                </div>
 
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

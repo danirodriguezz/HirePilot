@@ -6,7 +6,6 @@ import ConfirmModal from "../ui/ConfirmModal"
 import CustomDatePicker from "../ui/CustomDatePicker"
 import toast from "react-hot-toast"
 
-
 const ExperienceSection = ({ data, onUpdate }) => {
   const [experiences, setExperiences] = useState(data)
   
@@ -14,7 +13,30 @@ const ExperienceSection = ({ data, onUpdate }) => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [itemToDelete, setItemToDelete] = useState(null)
 
-  // Sincroniza si el padre cambia los datos (ej. al terminar de cargar la API)
+  // 1. LÓGICA DE DIRTY STATE (Cambios sin guardar)
+  // Comprueba si una experiencia individual tiene cambios comparándola con 'data'
+  const isExperienceDirty = (exp) => {
+    const original = data.find(d => d.id === exp.id)
+    if (!original) return true // Si no existe en 'data', es una experiencia nueva (borrador)
+    return JSON.stringify(exp) !== JSON.stringify(original)
+  }
+
+  // Comprueba si HAY ALGUNA experiencia en toda la lista con cambios
+  const isAnyDirty = experiences.some(isExperienceDirty)
+
+  // Evitar que cierre la pestaña si hay cambios en alguna experiencia
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (isAnyDirty) {
+        e.preventDefault()
+        e.returnValue = "" 
+      }
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  }, [isAnyDirty])
+
+  // Sincroniza si el padre cambia los datos
   useEffect(() => {
     setExperiences(data)
   }, [data])
@@ -25,22 +47,19 @@ const ExperienceSection = ({ data, onUpdate }) => {
       const payload = mapToBackend(experienceLocal)
       let savedDataBackend;
 
-      if (experienceLocal.id && typeof experienceLocal.id !== 'number') {
+      if (experienceLocal.id && typeof experienceLocal.id === 'string' && experienceLocal.id.startsWith('temp-')) {
          savedDataBackend = await experienceService.create(payload)
       } else {
          savedDataBackend = await experienceService.update(experienceLocal.id, payload)
       }
 
-      // 2. Convertir respuesta a Frontend
       const savedDataFrontend = mapToFrontend(savedDataBackend)
 
-      // 3. Actualizar Estado Local
       const newList = experiences.map(e => 
         e.id === experienceLocal.id ? savedDataFrontend : e
       )
       setExperiences(newList)
       
-      // 4. IMPORTANTE: Actualizar al Padre para que tenga la versión nueva
       onUpdate(newList)
 
       return savedDataFrontend
@@ -64,17 +83,14 @@ const ExperienceSection = ({ data, onUpdate }) => {
     setIsDeleteModalOpen(false)
 
     const id = itemToDelete
-    const isTemp = typeof id !== 'number'
+    const isTemp = typeof id === 'string' && id.startsWith('temp-')
 
     const deleteAction = async () => {
       if (!isTemp) {
         await experienceService.delete(id)
       }
-      // Actualizar estado local
       const newList = experiences.filter(e => e.id !== id)
       setExperiences(newList)
-      
-      // Actualizar al Padre
       onUpdate(newList)
     }
 
@@ -104,6 +120,7 @@ const ExperienceSection = ({ data, onUpdate }) => {
       current: false,
       achievements: [],
     }
+    // Añadimos al principio de la lista
     setExperiences([newExperience, ...experiences])
   }
 
@@ -144,7 +161,7 @@ const ExperienceSection = ({ data, onUpdate }) => {
           </div>
           <button
             onClick={handleAddExperience}
-            className="w-full sm:w-auto justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md transition-colors flex items-center gap-2"
+            className="w-full sm:w-auto justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md transition-colors flex items-center gap-2 shadow-sm"
           >
             <i className="fas fa-plus"></i>
             Añadir Experiencia
@@ -166,157 +183,193 @@ const ExperienceSection = ({ data, onUpdate }) => {
           </div>
         ) : (
           <div className="space-y-6">
-            {experiences.map((experience, index) => (
-              <div key={experience.id} className="border border-gray-200 rounded-lg p-6 relative">
-                
-                {/* Cabecera de la tarjeta */}
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">Experiencia {experiences.length - index}</h3>
-                  <button
-                      onClick={() => openDeleteModal(experience.id)}
-                      className="text-red-600 hover:text-red-700 transition-colors p-2"
-                      title="Eliminar experiencia"
-                    >
-                      <i className="fas fa-trash"></i>
-                  </button>
-                </div>
+            {experiences.map((experience, index) => {
+              
+              // Verificamos si ESTA tarjeta en específico tiene cambios
+              const isDirty = isExperienceDirty(experience);
 
-                {/* Formulario */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Empresa</label>
-                    <input
-                      type="text"
-                      value={experience.company}
-                      onChange={(e) => handleChangeField(experience.id, "company", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 outline-none"
-                      placeholder="Nombre de la empresa"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Puesto</label>
-                    <input
-                      type="text"
-                      value={experience.position}
-                      onChange={(e) => handleChangeField(experience.id, "position", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 outline-none"
-                      placeholder="Tu puesto"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
-                    <input
-                      type="text"
-                      value={experience.location}
-                      onChange={(e) => handleChangeField(experience.id, "location", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 outline-none"
-                    />
-                  </div>
+              return (
+                <div 
+                  key={experience.id} 
+                  // Cambiamos el borde dinámicamente
+                  className={`border rounded-lg p-6 relative transition-all duration-300 ${
+                    isDirty ? "border-amber-400 ring-1 ring-amber-400/50 pb-24 md:pb-6" : "border-gray-200"
+                  }`}
+                >
                   
-                  {/* Celda vacía para mantener alineación en desktop, opcional */}
-                  <div className="hidden md:block"></div>
-
-                  {/* --- INTEGRACIÓN DE CUSTOM DATE PICKER --- */}
-                  
-                  {/* Fecha de Inicio */}
-                  <div>
-                    <CustomDatePicker 
-                      label="Fecha de inicio"
-                      value={experience.startDate}
-                      onChange={(val) => handleChangeField(experience.id, "startDate", val)}
-                      showMonthYearPicker={true} // True para ver solo mes y año
-                      placeholder="Seleccionar inicio"
-                    />
+                  {/* Cabecera de la tarjeta */}
+                  <div className="flex justify-between items-start mb-4">
+                    <h3 className="text-lg font-medium text-gray-900">
+                      Experiencia {experiences.length - index} 
+                      {isDirty && <span className="ml-2 text-xs text-amber-600 font-normal italic">*Modificado</span>}
+                    </h3>
+                    <button
+                        onClick={() => openDeleteModal(experience.id)}
+                        className="text-red-600 hover:text-red-700 transition-colors p-2"
+                        title="Eliminar experiencia"
+                      >
+                        <i className="fas fa-trash"></i>
+                    </button>
                   </div>
 
-                  {/* Fecha de Fin (Renderizado Condicional) */}
-                  {!experience.current ? (
+                  {/* Formulario (Mantenemos todos tus inputs igual) */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
-                      <CustomDatePicker 
-                        label="Fecha de fin"
-                        value={experience.endDate}
-                        onChange={(val) => handleChangeField(experience.id, "endDate", val)}
-                        showMonthYearPicker={true}
-                        placeholder="Seleccionar fin"
-                        minDate={experience.startDate ? new Date(experience.startDate) : null}
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Empresa</label>
+                      <input
+                        type="text"
+                        value={experience.company}
+                        onChange={(e) => handleChangeField(experience.id, "company", e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 outline-none"
+                        placeholder="Nombre de la empresa"
                       />
                     </div>
-                  ) : (
-                    // Espacio vacío visual si está trabajando actualmente
-                    <div className="hidden md:block"></div>
-                  )}
 
-                  {/* Checkbox Trabajo Actual */}
-                  <div className="md:col-span-2 flex items-center mt-2">
-                    <label className="flex items-center cursor-pointer select-none">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Puesto</label>
                       <input
-                        type="checkbox"
-                        checked={experience.current}
-                        onChange={(e) => {
-                            // Si se marca como actual, limpiamos la fecha de fin
-                            handleChangeField(experience.id, "current", e.target.checked);
-                            if (e.target.checked) handleChangeField(experience.id, "endDate", "");
-                        }}
-                        className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
+                        type="text"
+                        value={experience.position}
+                        onChange={(e) => handleChangeField(experience.id, "position", e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 outline-none"
+                        placeholder="Tu puesto"
                       />
-                      <span className="ml-2 text-sm text-gray-700">Trabajo actual</span>
-                    </label>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
+                      <input
+                        type="text"
+                        value={experience.location}
+                        onChange={(e) => handleChangeField(experience.id, "location", e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 outline-none"
+                      />
+                    </div>
+                    
+                    <div className="hidden md:block"></div>
+
+                    {/* --- INTEGRACIÓN DE CUSTOM DATE PICKER --- */}
+                    <div>
+                      <CustomDatePicker 
+                        label="Fecha de inicio"
+                        value={experience.startDate}
+                        onChange={(val) => handleChangeField(experience.id, "startDate", val)}
+                        showMonthYearPicker={true}
+                        placeholder="Seleccionar inicio"
+                      />
+                    </div>
+
+                    {!experience.current ? (
+                      <div>
+                        <CustomDatePicker 
+                          label="Fecha de fin"
+                          value={experience.endDate}
+                          onChange={(val) => handleChangeField(experience.id, "endDate", val)}
+                          showMonthYearPicker={true}
+                          placeholder="Seleccionar fin"
+                          minDate={experience.startDate ? new Date(experience.startDate) : null}
+                        />
+                      </div>
+                    ) : (
+                      <div className="hidden md:block"></div>
+                    )}
+
+                    <div className="md:col-span-2 flex items-center mt-2">
+                      <label className="flex items-center cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={experience.current}
+                          onChange={(e) => {
+                              handleChangeField(experience.id, "current", e.target.checked);
+                              if (e.target.checked) handleChangeField(experience.id, "endDate", "");
+                          }}
+                          className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
+                        />
+                        <span className="ml-2 text-sm text-gray-700">Trabajo actual</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Descripción</label>
+                    <textarea
+                      value={experience.description}
+                      onChange={(e) => handleChangeField(experience.id, "description", e.target.value)}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 outline-none"
+                      placeholder="Describe tus responsabilidades..."
+                    />
+                  </div>
+
+                  {/* Logros */}
+                  <div className="mt-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Logros</label>
+                      {experience.achievements.map((ach, i) => (
+                          <div key={i} className="flex gap-2 mb-2">
+                              <input 
+                                  type="text" 
+                                  value={ach} 
+                                  onChange={(e) => handleAchievementChange(experience.id, i, e.target.value)}
+                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 outline-none"
+                                  placeholder="Logro clave..."
+                              />
+                              <button 
+                                onClick={() => handleRemoveAchievement(experience.id, i)} 
+                                className="text-gray-400 hover:text-red-500 transition-colors px-2"
+                              >
+                                <i className="fas fa-times"></i>
+                              </button>
+                          </div>
+                      ))}
+                      <button 
+                        onClick={() => handleAddAchievement(experience.id)} 
+                        className="text-sm text-emerald-600 hover:text-emerald-700 font-medium mt-1 flex items-center gap-1"
+                      >
+                          <i className="fas fa-plus-circle"></i> Añadir logro
+                      </button>
+                  </div>
+                  
+                  {/* FOOTER DE LA TARJETA (Sticky bar igual que Profile) */}
+                  <div
+                    className={`flex items-center justify-between transition-all duration-300
+                      ${isDirty
+                        // MÓVIL: Fijo en la parte inferior
+                        ? "fixed bottom-0 left-0 w-full z-50 p-4 bg-white/95 backdrop-blur-sm border-t border-amber-200 shadow-[0_-8px_15px_rgba(0,0,0,0.08)] " +
+                        // ESCRITORIO (md): Estático dentro de la tarjeta
+                        "md:static md:w-auto md:bg-amber-50/50 md:p-4 md:-mx-6 md:-mb-6 md:rounded-b-lg md:shadow-none mt-0 md:mt-6 md:border-t-0"
+                        // ESTADO GUARDADO: Diseño normal
+                        : "mt-6 pt-4 border-t border-gray-100"
+                      }
+                    `}
+                  >
+                    <div>
+                      {isDirty && (
+                        <p className="text-amber-700 text-sm flex items-center animate-pulse font-medium">
+                          <i className="fas fa-circle-exclamation mr-2"></i>
+                          <span className="hidden sm:inline">Cambios sin guardar</span>
+                          <span className="sm:hidden">Sin guardar</span>
+                        </p>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => handleSave(experience)}
+                      disabled={!isDirty && experience.id} // Deshabilita si no hay cambios reales
+                      className={`
+                          flex items-center gap-2 px-6 py-2.5 rounded-md text-white font-medium shadow-sm transition-all active:scale-95
+                          ${!isDirty 
+                            ? 'bg-emerald-600 hover:bg-emerald-700' 
+                            : 'bg-amber-600 hover:bg-amber-700 hover:shadow-md ring-2 ring-offset-1 ring-amber-600/30'
+                          }
+                        `}
+                    >
+                      <i className="fas fa-save"></i>
+                      Guardar
+                    </button>
                   </div>
                 </div>
-
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Descripción</label>
-                  <textarea
-                    value={experience.description}
-                    onChange={(e) => handleChangeField(experience.id, "description", e.target.value)}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 outline-none"
-                    placeholder="Describe tus responsabilidades..."
-                  />
-                </div>
-
-                {/* Logros */}
-                <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Logros</label>
-                    {experience.achievements.map((ach, i) => (
-                        <div key={i} className="flex gap-2 mb-2">
-                            <input 
-                                type="text" 
-                                value={ach} 
-                                onChange={(e) => handleAchievementChange(experience.id, i, e.target.value)}
-                                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 outline-none"
-                                placeholder="Logro clave..."
-                            />
-                            <button 
-                              onClick={() => handleRemoveAchievement(experience.id, i)} 
-                              className="text-gray-400 hover:text-red-500 transition-colors px-2"
-                            >
-                              <i className="fas fa-times"></i>
-                            </button>
-                        </div>
-                    ))}
-                    <button 
-                      onClick={() => handleAddAchievement(experience.id)} 
-                      className="text-sm text-emerald-600 hover:text-emerald-700 font-medium mt-1 flex items-center gap-1"
-                    >
-                        <i className="fas fa-plus-circle"></i> Añadir logro
-                    </button>
-                </div>
-                
-                {/* Botón Guardar */}
-                <div className="mt-6 flex justify-end border-t border-gray-100 pt-4">
-                    <button 
-                        onClick={() => handleSave(experience)}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-md transition-all shadow-sm hover:shadow-md text-sm font-medium flex items-center gap-2"
-                    >
-                        <i className="fas fa-save"></i>
-                        Guardar cambios
-                    </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
