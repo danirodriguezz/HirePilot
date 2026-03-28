@@ -178,7 +178,7 @@ const GenerateCVSection = ({ userData, onGenerate, isGenerating, generatedCV }) 
                </div>
             </div>
 
-            <div className="flex gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 w-full mt-6 lg:w-auto justify-center">
                 <PDFDownloadLink
                     document={
                       <CVDocument 

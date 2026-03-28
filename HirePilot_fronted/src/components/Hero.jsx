@@ -14,7 +14,7 @@ const Hero = () => {
   };
 
   return (
-    <section className="py-20 px-4 pt-32">
+    <section className=" py-12 px-4">
       <div className="container mx-auto text-center max-w-4xl">
         <div className="inline-block mb-6 bg-emerald-100 text-emerald-800 px-4 py-2 rounded-full text-sm font-semibold">
           ✨ Proyecto Hackathon: Generación de CVs con IA
