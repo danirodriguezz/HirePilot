@@ -3,28 +3,26 @@
 import { useState, useEffect } from "react"
 import { educationService, mapToBackend, mapToFrontendEducation } from "../../services/educationService"
 import ConfirmModal from "../ui/ConfirmModal"
-import CustomDatePicker from "../ui/CustomDatePicker" // <--- Importado OK
+import CustomDatePicker from "../ui/CustomDatePicker"
 import toast from "react-hot-toast"
 
 const EducationSection = ({ data, onUpdate }) => {
   const [educationList, setEducationList] = useState(data || [])
+  const [errors, setErrors] = useState({}) // Estado para manejar validaciones por ID
   
   // Estados para el Modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [itemToDelete, setItemToDelete] = useState(null)
 
-  // 1. LÓGICA DE DIRTY STATE (Cambios sin guardar)
-  // Comprueba si una educación individual tiene cambios
+  // 1. LÓGICA DE DIRTY STATE
   const isEducationDirty = (edu) => {
     const original = data.find(d => d.id === edu.id)
-    if (!original) return true // Es un borrador nuevo
+    if (!original) return true 
     return JSON.stringify(edu) !== JSON.stringify(original)
   }
 
-  // Comprueba si HAY ALGUNA educación en toda la lista con cambios
   const isAnyDirty = educationList.some(isEducationDirty)
 
-  // Evitar que cierre la pestaña si hay cambios sin guardar
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (isAnyDirty) {
@@ -36,18 +34,43 @@ const EducationSection = ({ data, onUpdate }) => {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload)
   }, [isAnyDirty])
 
-  // Cargar datos al iniciar o cuando el padre actualiza
   useEffect(() => {
     setEducationList(data)
+    setErrors({}) // Limpiamos errores si vienen datos nuevos del servidor
   }, [data])
+
+  // --- LÓGICA DE VALIDACIÓN ---
+  const validateEducation = (edu) => {
+    const newErrors = {}
+    
+    if (!edu.institution || !edu.institution.trim()) newErrors.institution = "La institución es obligatoria"
+    if (!edu.degree || !edu.degree.trim()) newErrors.degree = "El título es obligatorio"
+    if (!edu.field || !edu.field.trim()) newErrors.field = "El campo de estudio es obligatorio"
+    if (!edu.startDate) newErrors.startDate = "La fecha de inicio es obligatoria"
+    
+    // La fecha final solo es obligatoria si NO sigue estudiando actualmente
+    if (!edu.current && !edu.endDate) {
+      newErrors.endDate = "La fecha de fin es obligatoria"
+    }
+
+    return newErrors
+  }
 
   // 2. Lógica de Guardado (Crear/Editar)
   const handleSave = async (eduLocal) => {
+    // 1. Validar antes de guardar
+    const fieldErrors = validateEducation(eduLocal)
+    
+    if (Object.keys(fieldErrors).length > 0) {
+      setErrors(prev => ({ ...prev, [eduLocal.id]: fieldErrors }))
+      toast.error("Por favor, corrige los errores marcados antes de guardar.")
+      return
+    }
+
     const saveAction = async () => {
       const payload = mapToBackend(eduLocal)
       let savedDataBackend;
 
-      // Mejor verificación de IDs temporales (Igual que hicimos en Experiencia)
       if (eduLocal.id && typeof eduLocal.id === 'string' && eduLocal.id.startsWith('temp-')) {
          savedDataBackend = await educationService.create(payload)
       } else {
@@ -61,6 +84,14 @@ const EducationSection = ({ data, onUpdate }) => {
       )
       setEducationList(newList)
       onUpdate(newList)
+
+      // Limpiar errores tras guardar con éxito
+      setErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[eduLocal.id]
+        return newErrors
+      })
+
       return savedDataFrontend
     }
 
@@ -89,6 +120,13 @@ const EducationSection = ({ data, onUpdate }) => {
       const newList = educationList.filter(e => e.id !== id)
       setEducationList(newList)
       onUpdate(newList)
+
+      // Limpiar errores residuales si los había
+      setErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[id]
+        return newErrors
+      })
     }
 
     if (isTemp) {
@@ -124,7 +162,24 @@ const EducationSection = ({ data, onUpdate }) => {
     setEducationList(prev => prev.map(edu => 
       edu.id === id ? { ...edu, [field]: value } : edu
     ))
+
+    // Limpieza dinámica de errores
+    if (errors[id] && errors[id][field]) {
+      setErrors(prev => ({
+        ...prev,
+        [id]: { ...prev[id], [field]: undefined }
+      }))
+    }
   }
+
+  // Helper de estilos CSS
+  const getInputClasses = (eduId, fieldName) => `
+    w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 
+    ${errors[eduId]?.[fieldName] 
+      ? 'border-red-300 focus:ring-red-500 focus:border-red-500 bg-red-50' 
+      : 'border-gray-300 focus:ring-emerald-500 focus:border-emerald-500'
+    }
+  `
 
   return (
     <div className="bg-white rounded-lg shadow-sm border p-4 sm:p-6 text-sm sm:text-base space-y-6">
@@ -158,9 +213,8 @@ const EducationSection = ({ data, onUpdate }) => {
       ) : (
         <div className="space-y-6">
           {educationList.map((edu, index) => {
-            
-            // Calculamos si ESTA tarjeta tiene cambios
             const isDirty = isEducationDirty(edu);
+            const eduErrors = errors[edu.id] || {};
 
             return (
               <div 
@@ -186,62 +240,78 @@ const EducationSection = ({ data, onUpdate }) => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Institución</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Institución <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="text"
-                      value={edu.institution}
+                      value={edu.institution || ""}
                       onChange={(e) => handleChange(edu.id, "institution", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className={getInputClasses(edu.id, "institution")}
                       placeholder="Universidad o centro"
                     />
+                    {eduErrors.institution && <p className="mt-1 text-xs text-red-500">{eduErrors.institution}</p>}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Título</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Título <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="text"
-                      value={edu.degree}
+                      value={edu.degree || ""}
                       onChange={(e) => handleChange(edu.id, "degree", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className={getInputClasses(edu.id, "degree")}
                       placeholder="Ej: Grado, Máster..."
                     />
+                    {eduErrors.degree && <p className="mt-1 text-xs text-red-500">{eduErrors.degree}</p>}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Campo de estudio</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Campo de estudio <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="text"
-                      value={edu.field}
+                      value={edu.field || ""}
                       onChange={(e) => handleChange(edu.id, "field", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className={getInputClasses(edu.id, "field")}
                       placeholder="Ej: Informática, Derecho..."
                     />
+                    {eduErrors.field && <p className="mt-1 text-xs text-red-500">{eduErrors.field}</p>}
                   </div>
                   
-                  {/* Espacio alineación Desktop */}
                   <div className="hidden md:block"></div>
 
                   {/* Fechas */}
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Fecha de inicio <span className="text-red-500">*</span>
+                    </label>
                     <CustomDatePicker 
-                        label="Fecha de inicio"
                         value={edu.startDate}
                         onChange={(val) => handleChange(edu.id, "startDate", val)}
                         showMonthYearPicker={true} 
                         placeholder="Seleccionar inicio"
+                        className={eduErrors.startDate ? "border-red-300 bg-red-50" : ""}
                       />
+                      {eduErrors.startDate && <p className="mt-1 text-xs text-red-500">{eduErrors.startDate}</p>}
                   </div>
 
                   {!edu.current ? (
                     <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Fecha de fin <span className="text-red-500">*</span>
+                      </label>
                       <CustomDatePicker 
-                          label="Fecha de fin"
                           value={edu.endDate}
                           onChange={(val) => handleChange(edu.id, "endDate", val)}
                           showMonthYearPicker={true}
                           placeholder="Seleccionar fin"
                           minDate={edu.startDate ? new Date(edu.startDate) : null}
+                          className={eduErrors.endDate ? "border-red-300 bg-red-50" : ""}
                         />
+                        {eduErrors.endDate && <p className="mt-1 text-xs text-red-500">{eduErrors.endDate}</p>}
                     </div>
                   ) : (
                     <div className="hidden md:block"></div>
@@ -264,10 +334,12 @@ const EducationSection = ({ data, onUpdate }) => {
 
                   {/* Nota media */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Nota media (Opcional)</label>
+                    <label className="block text-sm font-medium  mb-2 text-gray-700">
+                      Nota media <span className="font-normal text-gray-500">(Opcional)</span>
+                    </label>
                     <input
                       type="text"
-                      value={edu.gpa}
+                      value={edu.gpa || ""}
                       onChange={(e) => handleChange(edu.id, "gpa", e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       placeholder="Ej: 8.5/10"
@@ -276,26 +348,24 @@ const EducationSection = ({ data, onUpdate }) => {
 
                   {/* Descripción */}
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Descripción (Opcional)</label>
+                    <label className="block text-sm font-medium  mb-2 text-gray-700">
+                      Descripción <span className="font-normal text-gray-500">(Recomendable)</span>
+                    </label>
                     <textarea
-                      value={edu.description}
+                      value={edu.description || ""}
                       onChange={(e) => handleChange(edu.id, "description", e.target.value)}
                       rows={3}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      placeholder="Logros académicos, tesis, actividades..."
+                      placeholder="Logros académicos, tesis, actividades extracurriculares..."
                     />
                   </div>
-                </div> {/* <--- FIN DEL GRID DE INPUTS */}
+                </div>
 
-                {/* FOOTER DE LA TARJETA (Sticky bar igual que Profile/Experience) */}
+                {/* FOOTER DE LA TARJETA */}
                 <div
                   className={`flex items-center justify-between transition-all duration-300
                     ${isDirty
-                      // MÓVIL: Fijo en la parte inferior
-                      ? "fixed bottom-0 left-0 w-full z-50 p-4 bg-white/95 backdrop-blur-sm border-t border-amber-200 shadow-[0_-8px_15px_rgba(0,0,0,0.08)] " +
-                      // ESCRITORIO (md): Estático dentro de la tarjeta
-                      "md:static md:w-auto md:bg-amber-50/50 md:p-4 md:-mx-6 md:-mb-6 md:rounded-b-lg md:shadow-none mt-0 md:mt-6 md:border-t-0"
-                      // ESTADO GUARDADO: Diseño normal
+                      ? "fixed bottom-0 left-0 w-full z-50 p-4 bg-white/95 backdrop-blur-sm border-t border-amber-200 shadow-[0_-8px_15px_rgba(0,0,0,0.08)] md:static md:w-auto md:bg-amber-50/50 md:p-4 md:-mx-6 md:-mb-6 md:rounded-b-lg md:shadow-none mt-0 md:mt-6 md:border-t-0"
                       : "mt-6 pt-4 border-t border-gray-100"
                     }
                   `}
@@ -312,7 +382,7 @@ const EducationSection = ({ data, onUpdate }) => {
 
                   <button
                     onClick={() => handleSave(edu)}
-                    disabled={!isDirty && edu.id} // Deshabilitado si no hay cambios reales
+                    disabled={!isDirty && edu.id && !edu.id.toString().startsWith('temp-')}
                     className={`
                         flex items-center gap-2 px-6 py-2.5 rounded-md text-white font-medium shadow-sm transition-all active:scale-95
                         ${!isDirty 

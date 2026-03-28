@@ -3,26 +3,26 @@
 import { useState, useEffect } from "react"
 import { certificateService, mapToFrontendCertificate, mapToBackendCertificate } from "../../services/certificateService"
 import ConfirmModal from "../ui/ConfirmModal"
-import CustomDatePicker from "../ui/CustomDatePicker" // <--- IMPORTACIÓN AÑADIDA
+import CustomDatePicker from "../ui/CustomDatePicker"
 import toast from "react-hot-toast"
 
 const CertificatesSection = ({ data, onUpdate }) => {
   const [certificates, setCertificates] = useState(data || [])
+  const [errors, setErrors] = useState({}) // Nuevo estado para validaciones
 
   // Estados del Modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [itemToDelete, setItemToDelete] = useState(null)
 
-  // 1. LÓGICA DE DIRTY STATE (Cambios sin guardar)
+  // 1. LÓGICA DE DIRTY STATE
   const isCertificateDirty = (cert) => {
     const original = data.find(d => d.id === cert.id)
-    if (!original) return true // Es un borrador nuevo
+    if (!original) return true 
     return JSON.stringify(cert) !== JSON.stringify(original)
   }
 
   const isAnyDirty = certificates.some(isCertificateDirty)
 
-  // Evitar que cierre la pestaña si hay cambios sin guardar
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (isAnyDirty) {
@@ -34,18 +34,45 @@ const CertificatesSection = ({ data, onUpdate }) => {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload)
   }, [isAnyDirty])
 
-  // Cargar datos
   useEffect(() => {
     setCertificates(data)
+    setErrors({}) // Limpiamos errores si vienen datos nuevos
   }, [data])
+
+  // --- LÓGICA DE VALIDACIÓN ---
+  const validateCertificate = (cert) => {
+    const newErrors = {}
+    
+    // Campos obligatorios requeridos
+    if (!cert.name || !cert.name.trim()) newErrors.name = "El nombre del certificado es obligatorio"
+    if (!cert.issuer || !cert.issuer.trim()) newErrors.issuer = "La organización emisora es obligatoria"
+    if (!cert.date) newErrors.date = "La fecha de emisión es obligatoria"
+    if (!cert.description || !cert.description.trim()) newErrors.description = "La descripción es obligatoria"
+    
+    // Validación extra: Si hay URL, que tenga formato válido
+    const urlPattern = /^(https?:\/\/)?([\w\d\-_]+\.+[A-Za-z]{2,})+\/?/
+    if (cert.url && cert.url.trim() !== "" && !urlPattern.test(cert.url)) {
+      newErrors.url = "Introduce una URL válida"
+    }
+
+    return newErrors
+  }
 
   // 2. Guardar (Crear o Editar)
   const handleSave = async (certLocal) => {
+    // 1. Validar antes de hacer la petición
+    const fieldErrors = validateCertificate(certLocal)
+    
+    if (Object.keys(fieldErrors).length > 0) {
+      setErrors(prev => ({ ...prev, [certLocal.id]: fieldErrors }))
+      toast.error("Por favor, corrige los errores marcados antes de guardar.")
+      return
+    }
+
     const saveAction = async () => {
       const payload = mapToBackendCertificate(certLocal)
       let savedDataBackend;
 
-      // Verificación segura de ID temporal
       if (certLocal.id && typeof certLocal.id === 'string' && certLocal.id.startsWith('temp-')) {
          savedDataBackend = await certificateService.create(payload)
       } else {
@@ -59,6 +86,14 @@ const CertificatesSection = ({ data, onUpdate }) => {
       )
       setCertificates(newList)
       onUpdate(newList)
+
+      // Limpiar errores de este certificado tras éxito
+      setErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[certLocal.id]
+        return newErrors
+      })
+
       return savedDataFrontend
     }
 
@@ -87,7 +122,14 @@ const CertificatesSection = ({ data, onUpdate }) => {
       
       const newList = certificates.filter(c => c.id !== id)
       setCertificates(newList)
-      onUpdate(newList) // <-- Añadido onUpdate para sincronizar con el padre
+      onUpdate(newList) 
+
+      // Limpiar errores residuales de la tarjeta borrada
+      setErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[id]
+        return newErrors
+      })
     }
 
     if (isTemp) {
@@ -115,7 +157,6 @@ const CertificatesSection = ({ data, onUpdate }) => {
       url: "",
       description: "",
     }
-    // Añadir siempre al principio de la lista
     setCertificates([newCertificate, ...certificates])
   }
 
@@ -123,7 +164,24 @@ const CertificatesSection = ({ data, onUpdate }) => {
     setCertificates(prev => prev.map((cert) => 
       (cert.id === id ? { ...cert, [field]: value } : cert)
     ))
+
+    // Limpieza dinámica de errores al corregir
+    if (errors[id] && errors[id][field]) {
+      setErrors(prev => ({
+        ...prev,
+        [id]: { ...prev[id], [field]: undefined }
+      }))
+    }
   }
+
+  // Helper de estilos CSS
+  const getInputClasses = (certId, fieldName) => `
+    w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 
+    ${errors[certId]?.[fieldName] 
+      ? 'border-red-300 focus:ring-red-500 focus:border-red-500 bg-red-50' 
+      : 'border-gray-300 focus:ring-emerald-500 focus:border-emerald-500'
+    }
+  `
 
   return (
     <div className="bg-white rounded-lg shadow-sm border p-4 sm:p-6 text-sm sm:text-base space-y-6">
@@ -158,9 +216,8 @@ const CertificatesSection = ({ data, onUpdate }) => {
       ) : (
         <div className="space-y-6">
           {certificates.map((cert, index) => {
-            
-            // Calculamos si ESTA tarjeta tiene cambios
             const isDirty = isCertificateDirty(cert);
+            const certErrors = errors[cert.id] || {};
 
             return (
               <div 
@@ -186,41 +243,53 @@ const CertificatesSection = ({ data, onUpdate }) => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Nombre del certificado</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nombre del certificado <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="text"
-                      value={cert.name}
+                      value={cert.name || ""}
                       onChange={(e) => updateCertificate(cert.id, "name", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className={getInputClasses(cert.id, "name")}
                       placeholder="Ej: AWS Certified Solutions Architect"
                     />
+                    {certErrors.name && <p className="mt-1 text-xs text-red-500">{certErrors.name}</p>}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Organización emisora</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Organización emisora <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="text"
-                      value={cert.issuer}
+                      value={cert.issuer || ""}
                       onChange={(e) => updateCertificate(cert.id, "issuer", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className={getInputClasses(cert.id, "issuer")}
                       placeholder="Ej: Amazon Web Services"
                     />
+                    {certErrors.issuer && <p className="mt-1 text-xs text-red-500">{certErrors.issuer}</p>}
                   </div>
 
                   {/* Fechas */}
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Fecha de emisión <span className="text-red-500">*</span>
+                    </label>
                     <CustomDatePicker
-                      label="Fecha de emisión"
                       value={cert.date}
                       onChange={(val) => updateCertificate(cert.id, "date", val)}
                       showMonthYearPicker={true}
                       placeholder="Seleccionar fecha"
+                      className={certErrors.date ? "border-red-300 bg-red-50" : ""}
                     />
+                    {certErrors.date && <p className="mt-1 text-xs text-red-500">{certErrors.date}</p>}
                   </div>
 
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Fecha de expiración <span className="font-normal text-gray-500">(Opcional)</span>
+                    </label>
                     <CustomDatePicker
-                      label="Fecha de expiración (opcional)"
                       value={cert.expiryDate}
                       onChange={(val) => updateCertificate(cert.id, "expiryDate", val)}
                       showMonthYearPicker={true}
@@ -230,10 +299,12 @@ const CertificatesSection = ({ data, onUpdate }) => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">ID de credencial (opcional)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 ">
+                      ID de credencial <span className="font-normal text-gray-500">(Opcional)</span>
+                    </label>
                     <input
                       type="text"
-                      value={cert.credentialId}
+                      value={cert.credentialId || ""}
                       onChange={(e) => updateCertificate(cert.id, "credentialId", e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       placeholder="Número o código"
@@ -241,37 +312,39 @@ const CertificatesSection = ({ data, onUpdate }) => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">URL de verificación (opcional)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 ">
+                      URL de verificación <span className="font-normal text-gray-500">(Opcional)</span>
+                    </label>
                     <input
                       type="url"
-                      value={cert.url}
+                      value={cert.url || ""}
                       onChange={(e) => updateCertificate(cert.id, "url", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className={getInputClasses(cert.id, "url")}
                       placeholder="https://..."
                     />
+                    {certErrors.url && <p className="mt-1 text-xs text-red-500">{certErrors.url}</p>}
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Descripción (opcional)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Descripción <span className="text-red-500">*</span>
+                    </label>
                     <textarea
-                      value={cert.description}
+                      value={cert.description || ""}
                       onChange={(e) => updateCertificate(cert.id, "description", e.target.value)}
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      placeholder="Habilidades adquiridas..."
+                      className={getInputClasses(cert.id, "description")}
+                      placeholder="Habilidades adquiridas o breve explicación..."
                     />
+                    {certErrors.description && <p className="mt-1 text-xs text-red-500">{certErrors.description}</p>}
                   </div>
-                </div> {/* <--- FIN DEL GRID DE INPUTS */}
+                </div>
 
-                {/* FOOTER DE LA TARJETA (Sticky bar en móviles) */}
+                {/* FOOTER DE LA TARJETA */}
                 <div
                   className={`flex items-center justify-between transition-all duration-300
                     ${isDirty
-                      // MÓVIL: Fijo en la parte inferior
-                      ? "fixed bottom-0 left-0 w-full z-50 p-4 bg-white/95 backdrop-blur-sm border-t border-amber-200 shadow-[0_-8px_15px_rgba(0,0,0,0.08)] " +
-                      // ESCRITORIO (md): Estático dentro de la tarjeta
-                      "md:static md:w-auto md:bg-amber-50/50 md:p-4 md:-mx-6 md:-mb-6 md:rounded-b-lg md:shadow-none mt-0 md:mt-6 md:border-t-0"
-                      // ESTADO GUARDADO: Diseño normal
+                      ? "fixed bottom-0 left-0 w-full z-50 p-4 bg-white/95 backdrop-blur-sm border-t border-amber-200 shadow-[0_-8px_15px_rgba(0,0,0,0.08)] md:static md:w-auto md:bg-amber-50/50 md:p-4 md:-mx-6 md:-mb-6 md:rounded-b-lg md:shadow-none mt-0 md:mt-6 md:border-t-0"
                       : "mt-6 pt-4 border-t border-gray-100"
                     }
                   `}
@@ -288,7 +361,7 @@ const CertificatesSection = ({ data, onUpdate }) => {
 
                   <button
                     onClick={() => handleSave(cert)}
-                    disabled={!isDirty && cert.id} // Deshabilitado si no hay cambios reales
+                    disabled={!isDirty && cert.id && !cert.id.toString().startsWith('temp-')}
                     className={`
                         flex items-center gap-2 px-6 py-2.5 rounded-md text-white font-medium shadow-sm transition-all active:scale-95
                         ${!isDirty 

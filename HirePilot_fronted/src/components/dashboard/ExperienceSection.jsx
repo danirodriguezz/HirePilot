@@ -8,23 +8,21 @@ import toast from "react-hot-toast"
 
 const ExperienceSection = ({ data, onUpdate }) => {
   const [experiences, setExperiences] = useState(data)
+  const [errors, setErrors] = useState({}) // Estado para manejar validaciones por ID de experiencia
   
   // Estado para el Modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [itemToDelete, setItemToDelete] = useState(null)
 
   // 1. LÓGICA DE DIRTY STATE (Cambios sin guardar)
-  // Comprueba si una experiencia individual tiene cambios comparándola con 'data'
   const isExperienceDirty = (exp) => {
     const original = data.find(d => d.id === exp.id)
-    if (!original) return true // Si no existe en 'data', es una experiencia nueva (borrador)
+    if (!original) return true 
     return JSON.stringify(exp) !== JSON.stringify(original)
   }
 
-  // Comprueba si HAY ALGUNA experiencia en toda la lista con cambios
   const isAnyDirty = experiences.some(isExperienceDirty)
 
-  // Evitar que cierre la pestaña si hay cambios en alguna experiencia
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (isAnyDirty) {
@@ -36,31 +34,72 @@ const ExperienceSection = ({ data, onUpdate }) => {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload)
   }, [isAnyDirty])
 
-  // Sincroniza si el padre cambia los datos
   useEffect(() => {
     setExperiences(data)
+    setErrors({}) // Limpiamos errores si vienen datos nuevos del servidor
   }, [data])
+
+  // --- LÓGICA DE VALIDACIÓN ---
+  const validateExperience = (exp) => {
+    const newErrors = {}
+    
+    if (!exp.company || !exp.company.trim()) newErrors.company = "La empresa es obligatoria"
+    if (!exp.position || !exp.position.trim()) newErrors.position = "El puesto es obligatorio"
+    if (!exp.location || !exp.location.trim()) newErrors.location = "La ubicación es obligatoria"
+    if (!exp.description || !exp.description.trim()) newErrors.description = "La descripción es obligatoria"
+    if (!exp.startDate) newErrors.startDate = "La fecha de inicio es obligatoria"
+    
+    // La fecha final solo es obligatoria si NO es su trabajo actual
+    if (!exp.current && !exp.endDate) {
+      newErrors.endDate = "La fecha de fin es obligatoria"
+    }
+
+    return newErrors
+  }
 
   // --- LÓGICA DE GUARDADO ---
   const handleSave = async (experienceLocal) => {
+    // 1. SANITIZACIÓN (Limpieza de datos): 
+    // Filtramos los logros que estén vacíos o solo contengan espacios
+    const cleanedExperience = {
+      ...experienceLocal,
+      achievements: experienceLocal.achievements.filter(ach => ach && ach.trim() !== "")
+    }
+
+    // 2. Validar antes de guardar (usamos el objeto limpio)
+    const fieldErrors = validateExperience(cleanedExperience)
+    
+    if (Object.keys(fieldErrors).length > 0) {
+      setErrors(prev => ({ ...prev, [cleanedExperience.id]: fieldErrors }))
+      toast.error("Por favor, corrige los errores marcados antes de guardar.")
+      return
+    }
+
     const saveAction = async () => {
-      const payload = mapToBackend(experienceLocal)
+      // 3. Mapeamos al backend usando los datos ya limpios
+      const payload = mapToBackend(cleanedExperience)
       let savedDataBackend;
 
-      if (experienceLocal.id && typeof experienceLocal.id === 'string' && experienceLocal.id.startsWith('temp-')) {
+      if (cleanedExperience.id && typeof cleanedExperience.id === 'string' && cleanedExperience.id.startsWith('temp-')) {
          savedDataBackend = await experienceService.create(payload)
       } else {
-         savedDataBackend = await experienceService.update(experienceLocal.id, payload)
+         savedDataBackend = await experienceService.update(cleanedExperience.id, payload)
       }
 
       const savedDataFrontend = mapToFrontend(savedDataBackend)
 
       const newList = experiences.map(e => 
-        e.id === experienceLocal.id ? savedDataFrontend : e
+        e.id === cleanedExperience.id ? savedDataFrontend : e
       )
       setExperiences(newList)
-      
       onUpdate(newList)
+
+      // Limpiar errores para esta experiencia concreta tras guardar exitosamente
+      setErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[cleanedExperience.id]
+        return newErrors
+      })
 
       return savedDataFrontend
     }
@@ -92,6 +131,13 @@ const ExperienceSection = ({ data, onUpdate }) => {
       const newList = experiences.filter(e => e.id !== id)
       setExperiences(newList)
       onUpdate(newList)
+      
+      // Limpiar errores residuales de la experiencia borrada
+      setErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[id]
+        return newErrors
+      })
     }
 
     if (isTemp) {
@@ -120,7 +166,6 @@ const ExperienceSection = ({ data, onUpdate }) => {
       current: false,
       achievements: [],
     }
-    // Añadimos al principio de la lista
     setExperiences([newExperience, ...experiences])
   }
 
@@ -128,6 +173,14 @@ const ExperienceSection = ({ data, onUpdate }) => {
     setExperiences(prev => prev.map(exp => 
       exp.id === id ? { ...exp, [field]: value } : exp
     ))
+
+    // Limpieza dinámica de errores al escribir
+    if (errors[id] && errors[id][field]) {
+      setErrors(prev => ({
+        ...prev,
+        [id]: { ...prev[id], [field]: undefined }
+      }))
+    }
   }
 
   const handleAchievementChange = (expId, index, value) => {
@@ -150,6 +203,15 @@ const ExperienceSection = ({ data, onUpdate }) => {
       exp.id === expId ? { ...exp, achievements: exp.achievements.filter((_, i) => i !== index) } : exp
     ))
   }
+
+  // Helper para generar las clases de los inputs dependiendo de si hay error o no
+  const getInputClasses = (expId, fieldName) => `
+    w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 
+    ${errors[expId]?.[fieldName] 
+      ? 'border-red-300 focus:ring-red-500 focus:border-red-500 bg-red-50' 
+      : 'border-gray-300 focus:ring-emerald-500 focus:border-emerald-500'
+    }
+  `
 
   return (
     <div className="space-y-6">
@@ -184,20 +246,16 @@ const ExperienceSection = ({ data, onUpdate }) => {
         ) : (
           <div className="space-y-6">
             {experiences.map((experience, index) => {
-              
-              // Verificamos si ESTA tarjeta en específico tiene cambios
               const isDirty = isExperienceDirty(experience);
+              const expErrors = errors[experience.id] || {}; // Extraemos errores de esta tarjeta
 
               return (
                 <div 
                   key={experience.id} 
-                  // Cambiamos el borde dinámicamente
                   className={`border rounded-lg p-6 relative transition-all duration-300 ${
                     isDirty ? "border-amber-400 ring-1 ring-amber-400/50 pb-24 md:pb-6" : "border-gray-200"
                   }`}
                 >
-                  
-                  {/* Cabecera de la tarjeta */}
                   <div className="flex justify-between items-start mb-4">
                     <h3 className="text-lg font-medium text-gray-900">
                       Experiencia {experiences.length - index} 
@@ -212,63 +270,81 @@ const ExperienceSection = ({ data, onUpdate }) => {
                     </button>
                   </div>
 
-                  {/* Formulario (Mantenemos todos tus inputs igual) */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Empresa</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Empresa <span className="text-red-500">*</span>
+                      </label>
                       <input
                         type="text"
-                        value={experience.company}
+                        value={experience.company || ""}
                         onChange={(e) => handleChangeField(experience.id, "company", e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 outline-none"
+                        className={getInputClasses(experience.id, 'company')}
                         placeholder="Nombre de la empresa"
                       />
+                      {expErrors.company && <p className="mt-1 text-xs text-red-500">{expErrors.company}</p>}
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Puesto</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Puesto <span className="text-red-500">*</span>
+                      </label>
                       <input
                         type="text"
-                        value={experience.position}
+                        value={experience.position || ""}
                         onChange={(e) => handleChangeField(experience.id, "position", e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 outline-none"
+                        className={getInputClasses(experience.id, 'position')}
                         placeholder="Tu puesto"
                       />
+                      {expErrors.position && <p className="mt-1 text-xs text-red-500">{expErrors.position}</p>}
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Ubicación <span className="text-red-500">*</span>
+                      </label>
                       <input
                         type="text"
-                        value={experience.location}
+                        value={experience.location || ""}
                         onChange={(e) => handleChangeField(experience.id, "location", e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 outline-none"
+                        className={getInputClasses(experience.id, 'location')}
+                        placeholder="Ej: Madrid, Remoto"
                       />
+                      {expErrors.location && <p className="mt-1 text-xs text-red-500">{expErrors.location}</p>}
                     </div>
                     
                     <div className="hidden md:block"></div>
 
-                    {/* --- INTEGRACIÓN DE CUSTOM DATE PICKER --- */}
+                    {/* FECHAS */}
                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Fecha de inicio <span className="text-red-500">*</span>
+                      </label>
                       <CustomDatePicker 
-                        label="Fecha de inicio"
                         value={experience.startDate}
                         onChange={(val) => handleChangeField(experience.id, "startDate", val)}
                         showMonthYearPicker={true}
                         placeholder="Seleccionar inicio"
+                        // Pasamos clase extra para el borde si falla
+                        className={expErrors.startDate ? "border-red-300 bg-red-50" : ""}
                       />
+                      {expErrors.startDate && <p className="mt-1 text-xs text-red-500">{expErrors.startDate}</p>}
                     </div>
 
                     {!experience.current ? (
                       <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Fecha de fin <span className="text-red-500">*</span>
+                        </label>
                         <CustomDatePicker 
-                          label="Fecha de fin"
                           value={experience.endDate}
                           onChange={(val) => handleChangeField(experience.id, "endDate", val)}
                           showMonthYearPicker={true}
                           placeholder="Seleccionar fin"
                           minDate={experience.startDate ? new Date(experience.startDate) : null}
+                          className={expErrors.endDate ? "border-red-300 bg-red-50" : ""}
                         />
+                        {expErrors.endDate && <p className="mt-1 text-xs text-red-500">{expErrors.endDate}</p>}
                       </div>
                     ) : (
                       <div className="hidden md:block"></div>
@@ -291,27 +367,30 @@ const ExperienceSection = ({ data, onUpdate }) => {
                   </div>
 
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Descripción</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Descripción <span className="text-red-500">*</span>
+                    </label>
                     <textarea
-                      value={experience.description}
+                      value={experience.description || ""}
                       onChange={(e) => handleChangeField(experience.id, "description", e.target.value)}
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 outline-none"
+                      className={getInputClasses(experience.id, 'description')}
                       placeholder="Describe tus responsabilidades..."
                     />
+                    {expErrors.description && <p className="mt-1 text-xs text-red-500">{expErrors.description}</p>}
                   </div>
 
-                  {/* Logros */}
+                  {/* Logros (Opcionales, no he añadido validación obligatoria aquí) */}
                   <div className="mt-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Logros</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Logros destacados (Opcional)</label>
                       {experience.achievements.map((ach, i) => (
                           <div key={i} className="flex gap-2 mb-2">
                               <input 
                                   type="text" 
-                                  value={ach} 
+                                  value={ach || ""} 
                                   onChange={(e) => handleAchievementChange(experience.id, i, e.target.value)}
                                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 outline-none"
-                                  placeholder="Logro clave..."
+                                  placeholder="Ej: Aumenté las ventas un 20%..."
                               />
                               <button 
                                 onClick={() => handleRemoveAchievement(experience.id, i)} 
@@ -329,18 +408,12 @@ const ExperienceSection = ({ data, onUpdate }) => {
                       </button>
                   </div>
                   
-                  {/* FOOTER DE LA TARJETA (Sticky bar igual que Profile) */}
-                  <div
-                    className={`flex items-center justify-between transition-all duration-300
+                  {/* FOOTER DE LA TARJETA */}
+                  <div className={`flex items-center justify-between transition-all duration-300
                       ${isDirty
-                        // MÓVIL: Fijo en la parte inferior
-                        ? "fixed bottom-0 left-0 w-full z-50 p-4 bg-white/95 backdrop-blur-sm border-t border-amber-200 shadow-[0_-8px_15px_rgba(0,0,0,0.08)] " +
-                        // ESCRITORIO (md): Estático dentro de la tarjeta
-                        "md:static md:w-auto md:bg-amber-50/50 md:p-4 md:-mx-6 md:-mb-6 md:rounded-b-lg md:shadow-none mt-0 md:mt-6 md:border-t-0"
-                        // ESTADO GUARDADO: Diseño normal
+                        ? "fixed bottom-0 left-0 w-full z-50 p-4 bg-white/95 backdrop-blur-sm border-t border-amber-200 shadow-[0_-8px_15px_rgba(0,0,0,0.08)] md:static md:w-auto md:bg-amber-50/50 md:p-4 md:-mx-6 md:-mb-6 md:rounded-b-lg md:shadow-none mt-0 md:mt-6 md:border-t-0"
                         : "mt-6 pt-4 border-t border-gray-100"
-                      }
-                    `}
+                      }`}
                   >
                     <div>
                       {isDirty && (
@@ -354,7 +427,7 @@ const ExperienceSection = ({ data, onUpdate }) => {
 
                     <button
                       onClick={() => handleSave(experience)}
-                      disabled={!isDirty && experience.id} // Deshabilita si no hay cambios reales
+                      disabled={!isDirty && experience.id && !experience.id.toString().startsWith('temp-')}
                       className={`
                           flex items-center gap-2 px-6 py-2.5 rounded-md text-white font-medium shadow-sm transition-all active:scale-95
                           ${!isDirty 

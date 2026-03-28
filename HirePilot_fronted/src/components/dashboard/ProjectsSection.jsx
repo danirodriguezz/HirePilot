@@ -8,6 +8,7 @@ import CustomDatePicker from "../ui/CustomDatePicker"
 
 const ProjectsSection = ({ data, availableSkills, onUpdate }) => {
   const [projects, setProjects] = useState(data || []) 
+  const [errors, setErrors] = useState({}) // Nuevo estado para validaciones
 
   // Estados Modal Borrado
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -24,13 +25,12 @@ const ProjectsSection = ({ data, availableSkills, onUpdate }) => {
   // 1. LÓGICA DE DIRTY STATE (Cambios sin guardar)
   const isProjectDirty = (proj) => {
     const original = data.find(d => d.id === proj.id)
-    if (!original) return true // Es un borrador nuevo
+    if (!original) return true 
     return JSON.stringify(proj) !== JSON.stringify(original)
   }
 
   const isAnyDirty = projects.some(isProjectDirty)
 
-  // Evitar que cierre la pestaña si hay cambios sin guardar
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (isAnyDirty) {
@@ -42,18 +42,46 @@ const ProjectsSection = ({ data, availableSkills, onUpdate }) => {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload)
   }, [isAnyDirty])
 
-  // Cargar Proyectos
   useEffect(() => {
     setProjects(data)
+    setErrors({}) // Limpiar errores al recibir nuevos datos
   }, [data])
+
+  // --- LÓGICA DE VALIDACIÓN (Basada en models.py) ---
+  const validateProject = (proj) => {
+    const newErrors = {}
+    
+    // Campos Obligatorios
+    if (!proj.title || !proj.title.trim()) newErrors.title = "El título del proyecto es obligatorio"
+    if (!proj.description || !proj.description.trim()) newErrors.description = "La descripción es obligatoria"
+    
+    // Validación de URLs (solo si se han rellenado)
+    const urlPattern = /^(https?:\/\/)?([\w\d\-_]+\.+[A-Za-z]{2,})+\/?/
+    if (proj.url && proj.url.trim() !== "" && !urlPattern.test(proj.url)) {
+      newErrors.url = "Introduce una URL válida"
+    }
+    if (proj.resource && proj.resource.trim() !== "" && !urlPattern.test(proj.resource)) {
+      newErrors.resource = "Introduce una URL válida"
+    }
+
+    return newErrors
+  }
 
   // 2. Guardar
   const handleSave = async (projLocal) => {
+    // 1. Validar antes de hacer la petición
+    const fieldErrors = validateProject(projLocal)
+    
+    if (Object.keys(fieldErrors).length > 0) {
+      setErrors(prev => ({ ...prev, [projLocal.id]: fieldErrors }))
+      toast.error("Por favor, corrige los errores marcados antes de guardar.")
+      return
+    }
+
     const saveAction = async () => {
       const payload = mapToBackendProject(projLocal)
       let savedDataBackend
       
-      // Verificación segura de ID temporal
       if (projLocal.id && typeof projLocal.id === 'string' && projLocal.id.startsWith('temp-')) {
          savedDataBackend = await projectService.create(payload)
       } else {
@@ -62,12 +90,16 @@ const ProjectsSection = ({ data, availableSkills, onUpdate }) => {
 
       const savedDataFrontend = mapToFrontendProject(savedDataBackend)
 
-      // Actualizar local
       const newList = projects.map(p => p.id === projLocal.id ? savedDataFrontend : p)
       setProjects(newList)
-      
-      // Actualizar PADRE
       onUpdate(newList)
+
+      // Limpiar errores para este proyecto tras guardar con éxito
+      setErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[projLocal.id]
+        return newErrors
+      })
 
       return savedDataFrontend
     }
@@ -97,6 +129,13 @@ const ProjectsSection = ({ data, availableSkills, onUpdate }) => {
       const newList = projects.filter(p => p.id !== id)
       setProjects(newList)
       onUpdate(newList)
+
+      // Limpiar errores residuales del proyecto borrado
+      setErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[id]
+        return newErrors
+      })
     }
 
     if (isTemp) {
@@ -132,9 +171,16 @@ const ProjectsSection = ({ data, availableSkills, onUpdate }) => {
 
   const handleChange = (id, field, value) => {
     setProjects(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p))
+
+    // Limpieza dinámica de errores al corregir
+    if (errors[id] && errors[id][field]) {
+      setErrors(prev => ({
+        ...prev,
+        [id]: { ...prev[id], [field]: undefined }
+      }))
+    }
   }
 
-  // Helper para manejar selección múltiple de skills
   const toggleSkill = (projId, skillId) => {
     setProjects(prev => prev.map(p => {
       if (p.id !== projId) return p
@@ -146,6 +192,15 @@ const ProjectsSection = ({ data, availableSkills, onUpdate }) => {
       }
     }))
   }
+
+  // Helper de estilos CSS
+  const getInputClasses = (projId, fieldName) => `
+    w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 
+    ${errors[projId]?.[fieldName] 
+      ? 'border-red-300 focus:ring-red-500 focus:border-red-500 bg-red-50 font-medium' 
+      : 'border-gray-300 focus:ring-emerald-500 focus:border-emerald-500 font-medium bg-white'
+    }
+  `
 
   return (
     <div className="bg-white rounded-lg shadow-sm border p-4 sm:p-6 text-sm sm:text-base space-y-6">
@@ -179,9 +234,8 @@ const ProjectsSection = ({ data, availableSkills, onUpdate }) => {
       ) : (
         <div className="space-y-8">
           {projects.map((proj, index) => {
-            
-            // Calculamos si ESTE proyecto tiene cambios
             const isDirty = isProjectDirty(proj);
+            const projErrors = errors[proj.id] || {};
 
             return (
               <div 
@@ -213,35 +267,42 @@ const ProjectsSection = ({ data, availableSkills, onUpdate }) => {
                   
                   {/* Título */}
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Título del Proyecto / Campaña</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Título del Proyecto / Campaña <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="text"
-                      value={proj.title}
+                      value={proj.title || ""}
                       onChange={(e) => handleChange(proj.id, "title", e.target.value)}
-                      className="w-full px-3 py-2 border rounded-md font-medium focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
+                      className={getInputClasses(proj.id, "title")}
                       placeholder="Ej: Lanzamiento Producto X"
                     />
+                    {projErrors.title && <p className="mt-1 text-xs text-red-500">{projErrors.title}</p>}
                   </div>
 
                   {/* Rol */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tu Rol</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 ">
+                      Tu Rol <span className="font-normal text-gray-500">(Opcional)</span>
+                    </label>
                     <input
                       type="text"
-                      value={proj.role}
+                      value={proj.role || ""}
                       onChange={(e) => handleChange(proj.id, "role", e.target.value)}
-                      className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
                       placeholder="Ej: Lead Designer, Copywriter..."
                     />
                   </div>
 
                   {/* Categoría */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tipo <span className="text-red-500">*</span>
+                    </label>
                     <select
-                      value={proj.category}
+                      value={proj.category || "PROFESSIONAL"}
                       onChange={(e) => handleChange(proj.id, "category", e.target.value)}
-                      className="w-full px-3 py-2 border rounded-md bg-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-emerald-500 outline-none"
                     >
                       {categories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                     </select>
@@ -249,12 +310,14 @@ const ProjectsSection = ({ data, availableSkills, onUpdate }) => {
 
                   {/* Organización */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Cliente / Empresa (Opcional)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 ">
+                      Cliente / Empresa <span className="font-normal text-gray-500">(Opcional)</span>
+                    </label>
                     <input
                       type="text"
-                      value={proj.organization}
+                      value={proj.organization || ""}
                       onChange={(e) => handleChange(proj.id, "organization", e.target.value)}
-                      className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
                       placeholder="Ej: Coca-Cola, Freelance..."
                     />
                   </div>
@@ -263,8 +326,10 @@ const ProjectsSection = ({ data, availableSkills, onUpdate }) => {
 
                   {/* Fechas */}
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 ">
+                      Inicio <span className="font-normal text-gray-500">(Opcional)</span>
+                    </label>
                     <CustomDatePicker 
-                      label="Inicio"
                       value={proj.startDate}
                       onChange={(val) => handleChange(proj.id, "startDate", val)}
                       showMonthYearPicker={true}
@@ -272,8 +337,10 @@ const ProjectsSection = ({ data, availableSkills, onUpdate }) => {
                     />
                   </div>
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 ">
+                      Fin <span className="font-normal text-gray-500">(Opcional)</span>
+                    </label>
                     <CustomDatePicker 
-                      label="Fin"
                       value={proj.endDate}
                       onChange={(val) => handleChange(proj.id, "endDate", val)}
                       showMonthYearPicker={true}
@@ -284,41 +351,52 @@ const ProjectsSection = ({ data, availableSkills, onUpdate }) => {
 
                   {/* Links */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Enlace Principal</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 ">
+                      Enlace Principal <span className="font-normal text-gray-500">(Opcional)</span>
+                    </label>
                     <input
                       type="url"
-                      value={proj.url}
+                      value={proj.url || ""}
                       onChange={(e) => handleChange(proj.id, "url", e.target.value)}
-                      className="w-full px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
+                      className={getInputClasses(proj.id, "url")}
                       placeholder="https://tucampana.com"
                     />
+                    {projErrors.url && <p className="mt-1 text-xs text-red-500">{projErrors.url}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Recurso Adicional (PDF, Video...)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 ">
+                      Recurso Adicional <span className="font-normal text-gray-500">(Opcional)</span>
+                    </label>
                     <input
                       type="url"
-                      value={proj.resource}
+                      value={proj.resource || ""}
                       onChange={(e) => handleChange(proj.id, "resource", e.target.value)}
-                      className="w-full px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
+                      className={getInputClasses(proj.id, "resource")}
                       placeholder="https://drive.google.com/..."
                     />
+                    {projErrors.resource && <p className="mt-1 text-xs text-red-500">{projErrors.resource}</p>}
                   </div>
 
                   {/* Descripción */}
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Descripción y Resultados</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Descripción y Resultados <span className="text-red-500">*</span>
+                    </label>
                     <textarea
-                      value={proj.description}
+                      value={proj.description || ""}
                       onChange={(e) => handleChange(proj.id, "description", e.target.value)}
                       rows={3}
-                      className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
+                      className={getInputClasses(proj.id, "description")}
                       placeholder="Describe el impacto, KPIs alcanzados o el concepto creativo..."
                     />
+                    {projErrors.description && <p className="mt-1 text-xs text-red-500">{projErrors.description}</p>}
                   </div>
 
                   {/* Selector de Skills */}
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Herramientas / Habilidades utilizadas</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 ">
+                      Herramientas / Habilidades utilizadas <span className="font-normal text-gray-500">(Opcional)</span>
+                    </label>
                     <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-3 border rounded-md bg-white">
                       {availableSkills && availableSkills.length > 0 ? availableSkills.map(skill => (
                         <button
@@ -336,17 +414,13 @@ const ProjectsSection = ({ data, availableSkills, onUpdate }) => {
                     </div>
                   </div>
 
-                </div> {/* <--- FIN DEL GRID DE INPUTS */}
+                </div>
 
-                {/* FOOTER DE LA TARJETA (Sticky bar en móviles) */}
+                {/* FOOTER DE LA TARJETA */}
                 <div
                   className={`flex items-center justify-between transition-all duration-300
                     ${isDirty
-                      // MÓVIL: Fijo en la parte inferior
-                      ? "fixed bottom-0 left-0 w-full z-50 p-4 bg-white/95 backdrop-blur-sm border-t border-amber-200 shadow-[0_-8px_15px_rgba(0,0,0,0.08)] " +
-                      // ESCRITORIO (md): Estático dentro de la tarjeta
-                      "md:static md:w-auto md:bg-amber-50/50 md:p-4 md:-mx-6 md:-mb-6 md:rounded-b-lg md:shadow-none mt-0 md:mt-6 md:border-t-0"
-                      // ESTADO GUARDADO: Diseño normal
+                      ? "fixed bottom-0 left-0 w-full z-50 p-4 bg-white/95 backdrop-blur-sm border-t border-amber-200 shadow-[0_-8px_15px_rgba(0,0,0,0.08)] md:static md:w-auto md:bg-amber-50/50 md:p-4 md:-mx-6 md:-mb-6 md:rounded-b-lg md:shadow-none mt-0 md:mt-6 md:border-t-0"
                       : "mt-6 pt-4 border-t border-gray-100 flex justify-end"
                     }
                   `}
@@ -363,7 +437,7 @@ const ProjectsSection = ({ data, availableSkills, onUpdate }) => {
 
                   <button
                     onClick={() => handleSave(proj)}
-                    disabled={!isDirty && proj.id} // Deshabilitado si no hay cambios
+                    disabled={!isDirty && proj.id && !proj.id.toString().startsWith('temp-')}
                     className={`
                         flex items-center gap-2 px-6 py-2.5 rounded-md text-white font-medium shadow-sm transition-all active:scale-95
                         ${!isDirty 

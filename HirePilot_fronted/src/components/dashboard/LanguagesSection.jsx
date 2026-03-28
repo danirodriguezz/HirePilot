@@ -7,6 +7,7 @@ import toast from "react-hot-toast"
 
 const LanguagesSection = ({ data, onUpdate }) => {
   const [languages, setLanguages] = useState(data || [])
+  const [errors, setErrors] = useState({}) // Estado para manejar validaciones
   
   // Estados del Modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -26,7 +27,7 @@ const LanguagesSection = ({ data, onUpdate }) => {
   // 1. LÓGICA DE DIRTY STATE (Cambios sin guardar)
   const isLanguageDirty = (lang) => {
     const original = data.find(d => d.id === lang.id)
-    if (!original) return true // Es un borrador nuevo
+    if (!original) return true 
     return JSON.stringify(lang) !== JSON.stringify(original)
   }
 
@@ -47,10 +48,30 @@ const LanguagesSection = ({ data, onUpdate }) => {
   // Cargar datos
   useEffect(() => {
     setLanguages(data)
+    setErrors({}) // Limpiamos errores al recibir nuevos datos
   }, [data])
+
+  // --- LÓGICA DE VALIDACIÓN ---
+  const validateLanguage = (lang) => {
+    const newErrors = {}
+    
+    if (!lang.name || !lang.name.trim()) newErrors.name = "El idioma es obligatorio"
+    if (!lang.proficiency || !lang.proficiency.trim()) newErrors.proficiency = "El nivel es obligatorio"
+    
+    return newErrors
+  }
 
   // 2. Guardar (Crear o Editar)
   const handleSave = async (langLocal) => {
+    // 1. Validar antes de guardar
+    const fieldErrors = validateLanguage(langLocal)
+    
+    if (Object.keys(fieldErrors).length > 0) {
+      setErrors(prev => ({ ...prev, [langLocal.id]: fieldErrors }))
+      toast.error("Por favor, corrige los errores marcados antes de guardar.")
+      return
+    }
+
     const saveAction = async () => {
       const payload = mapToBackendLenguage(langLocal)
       let savedDataBackend;
@@ -68,7 +89,15 @@ const LanguagesSection = ({ data, onUpdate }) => {
       )
       
       setLanguages(newList)
-      onUpdate(newList) // Notificar al padre
+      onUpdate(newList) 
+
+      // Limpiar errores para este idioma concreto tras guardar exitosamente
+      setErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[langLocal.id]
+        return newErrors
+      })
+
       return savedDataBackend;
     }
 
@@ -98,6 +127,13 @@ const LanguagesSection = ({ data, onUpdate }) => {
       const newList = languages.filter(l => l.id !== id)
       setLanguages(newList)
       onUpdate(newList) 
+
+      // Limpiar errores residuales del idioma borrado
+      setErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[id]
+        return newErrors
+      })
     }
 
     if (isTemp) {
@@ -128,7 +164,24 @@ const LanguagesSection = ({ data, onUpdate }) => {
     setLanguages(prev => prev.map((lang) => 
       (lang.id === id ? { ...lang, [field]: value } : lang)
     ))
+
+    // Limpieza dinámica de errores al escribir
+    if (errors[id] && errors[id][field]) {
+      setErrors(prev => ({
+        ...prev,
+        [id]: { ...prev[id], [field]: undefined }
+      }))
+    }
   }
+
+  // Helper de estilos CSS
+  const getInputClasses = (langId, fieldName) => `
+    w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 
+    ${errors[langId]?.[fieldName] 
+      ? 'border-red-300 focus:ring-red-500 focus:border-red-500 bg-red-50' 
+      : 'border-gray-300 focus:ring-emerald-500 focus:border-emerald-500'
+    }
+  `
 
   return (
     <div className="bg-white rounded-lg shadow-sm border p-4 sm:p-6 text-sm sm:text-base">
@@ -163,9 +216,8 @@ const LanguagesSection = ({ data, onUpdate }) => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {languages.map((language, index) => {
-            
-            // Calculamos si ESTA tarjeta tiene cambios
             const isDirty = isLanguageDirty(language);
+            const langErrors = errors[language.id] || {};
 
             return (
               <div 
@@ -192,22 +244,27 @@ const LanguagesSection = ({ data, onUpdate }) => {
 
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Idioma</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Idioma <span className="text-red-500">*</span>
+                      </label>
                       <input
                         type="text"
-                        value={language.name}
+                        value={language.name || ""}
                         onChange={(e) => updateLanguage(language.id, "name", e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className={getInputClasses(language.id, "name")}
                         placeholder="Ej: Inglés, Francés"
                       />
+                      {langErrors.name && <p className="mt-1 text-xs text-red-500">{langErrors.name}</p>}
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Nivel</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nivel <span className="text-red-500">*</span>
+                      </label>
                       <select
-                        value={language.proficiency}
+                        value={language.proficiency || "B1"}
                         onChange={(e) => updateLanguage(language.id, "proficiency", e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                        className={`${getInputClasses(language.id, "proficiency")} bg-white`}
                       >
                         {proficiencyLevels.map((level) => (
                           <option key={level.value} value={level.value}>
@@ -215,13 +272,16 @@ const LanguagesSection = ({ data, onUpdate }) => {
                           </option>
                         ))}
                       </select>
+                      {langErrors.proficiency && <p className="mt-1 text-xs text-red-500">{langErrors.proficiency}</p>}
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Certificados (opcional)</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2 ">
+                        Certificados <span className="font-normal text-gray-500">(Opcional)</span>
+                      </label>
                       <input
                         type="text"
-                        value={language.certificates}
+                        value={language.certificates || ""}
                         onChange={(e) => updateLanguage(language.id, "certificates", e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         placeholder="Ej: TOEFL, DELE, First..."
@@ -230,15 +290,11 @@ const LanguagesSection = ({ data, onUpdate }) => {
                   </div>
                 </div>
 
-                {/* FOOTER DE LA TARJETA (Sticky bar en móviles) */}
+                {/* FOOTER DE LA TARJETA */}
                 <div
                   className={`flex items-center justify-between transition-all duration-300
                     ${isDirty
-                      // MÓVIL: Fijo en la parte inferior
-                      ? "fixed bottom-0 left-0 w-full z-50 p-4 bg-white/95 backdrop-blur-sm border-t border-amber-200 shadow-[0_-8px_15px_rgba(0,0,0,0.08)] " +
-                      // ESCRITORIO (md): Estático dentro de la tarjeta (Nota el -mx-4 y -mb-4 para coincidir con el p-4 del grid)
-                      "md:static md:w-auto md:bg-amber-50/50 md:p-4 md:-mx-4 md:-mb-4 md:rounded-b-lg md:shadow-none mt-0 md:mt-4 md:border-t-0"
-                      // ESTADO GUARDADO: Diseño normal
+                      ? "fixed bottom-0 left-0 w-full z-50 p-4 bg-white/95 backdrop-blur-sm border-t border-amber-200 shadow-[0_-8px_15px_rgba(0,0,0,0.08)] md:static md:w-auto md:bg-amber-50/50 md:p-4 md:-mx-4 md:-mb-4 md:rounded-b-lg md:shadow-none mt-0 md:mt-4 md:border-t-0"
                       : "mt-4 pt-4 border-t border-gray-100 flex justify-end"
                     }
                   `}
@@ -255,7 +311,7 @@ const LanguagesSection = ({ data, onUpdate }) => {
 
                   <button
                     onClick={() => handleSave(language)}
-                    disabled={!isDirty && language.id} // Deshabilitado si no hay cambios reales
+                    disabled={!isDirty && language.id && !language.id.toString().startsWith('temp-')}
                     className={`
                         flex items-center gap-2 px-6 py-2 rounded-md text-white font-medium shadow-sm transition-all active:scale-95
                         ${!isDirty 
