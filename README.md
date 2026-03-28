@@ -44,22 +44,25 @@ Este proyecto sigue una arquitectura cliente-servidor moderna:
 
 
 ### Dashboard y Landingpage Principal (Tamaño de Ordenador)
-![Mockup Landingpage](.github/assets/mockups_ordenador/Captura%20desde%202026-02-19%2012-35-57.png)
+![Mockup Landingpage](.github/assets/mockups_ordenador/mockup1.png)
 
-![Mockup Dashboard](.github/assets/mockups_ordenador/Captura%20desde%202026-02-19%2012-40-30.png)
-
-
-### Dashboard y Landingpage Principal (Tamaño de movil)
-
-![Mockup Landingpage](.github/assets/mockups_movil/Captura%20desde%202026-02-19%2012-42-44.png)
+![Mockup Dashboard](.github/assets/mockups_ordenador/mockup2.png)
 
 
-![Mockup Dashboard](.github/assets/mockups_movil/Captura%20desde%202026-03-07%2022-16-12.png)
 
+### Dashboard y Landingpage Principal (Tamaño de móvil)
+
+<p align="center">
+  <img src=".github/assets/mockups_movil/mockup3.png" alt="Mockup Landingpage"/>
+</p>
 
 ### 🎥 Demo en Video
-[![Ver Demo en Video](https://img.youtube.com/vi/ry-FJfT5_B4/0.jpg)](https://www.youtube.com/watch?v=ry-FJfT5_B4)
 
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=ry-FJfT5_B4" target="_blank">
+    <img src="https://img.youtube.com/vi/ry-FJfT5_B4/maxresdefault.jpg" alt="Ver Demo en Video" width="80%" />
+  </a>
+</p>
 
 ---
 
