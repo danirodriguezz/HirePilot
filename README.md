@@ -8,7 +8,7 @@
 [![React 19](https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
 [![Django 5](https://img.shields.io/badge/Django_5-092E20?style=for-the-badge&logo=django&logoColor=white)](https://www.djangoproject.com/)
 
-[🌍 Ver Demo en Vivo en CubePath](https://hirepilot.dev/) · [🎥 Ver Video Demo](https://www.youtube.com/watch?v=ry-FJfT5_B4)
+[🎥 Ver Video Demo](https://www.youtube.com/watch?v=ry-FJfT5_B4)
 
 </div>
 
@@ -57,16 +57,16 @@ Para cumplir con los requisitos del desafío y garantizar una alta disponibilida
 
 
 ### Dashboard y Landingpage Principal (Tamaño de Ordenador)
-![Mockup Landingpage](.github/assets/mockups_ordenador/mockup1.png)
+![Mockup Landingpage](docs/mockups/mockup1.png)
 
-![Mockup Dashboard](.github/assets/mockups_ordenador/mockup2.png)
+![Mockup Dashboard](docs/mockups/mockup2.png)
 
 
 
 ### Dashboard y Landingpage Principal (Tamaño de móvil)
 
 <p align="center">
-  <img src=".github/assets/mockups_movil/mockup3.png" alt="Mockup Landingpage"/>
+  <img src="docs/mockups/mockup3.png" alt="Mockup Landingpage"/>
 </p>
 
 ### 🎥 Demo en Video
