@@ -8,7 +8,7 @@
 [![React 19](https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
 [![Django 5](https://img.shields.io/badge/Django_5-092E20?style=for-the-badge&logo=django&logoColor=white)](https://www.djangoproject.com/)
 
-[🎥 Ver Video Demo](https://www.youtube.com/watch?v=ry-FJfT5_B4)
+[🎥 Ver Video Demo](https://www.youtube.com/watch?v=xI-sxaI0wLo)
 
 </div>
 
